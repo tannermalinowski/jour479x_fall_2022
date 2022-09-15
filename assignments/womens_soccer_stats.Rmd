@@ -83,3 +83,6 @@ all_corner_kicks <- matches_2022 %>%
   mutate(corners_diff = corners - defensive_corners)
 
 ```
+
+library(tidyverse)
+correlations <- read_csv("data/ncaa_womens_soccer_matchstats_2022.csv")

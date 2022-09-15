@@ -1,0 +1,44 @@
+---
+title: "cfb"
+output: html_document
+date: "2022-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(cfbfastR)
+```
+
+
+```{r}
+tictoc::tic()
+pbp <- data.frame()
+seasons <- 2014:cfbfastR:::most_recent_cfb_season()
+progressr::with_progress({
+
+  pbp <- cfbfastR::load_cfb_pbp(seasons)
+})
+tictoc::toc()
+```
+
+
+```{r}
+glimpse(pbp)
+```
+
+## Which team has had the most penalties on the first play of a series? ##
+```{r}
+pbp %>% 
+  filter(new_series == 1, drive_play_number == 1, play_type == 'Penalty', down == 1, pos_team == 'Alabama')
+
+pbp %>% 
+  filter(new_series == 1, drive_play_number == 1, play_type == 'Penalty', down == 1) %>% 
+  group_by(year) %>% 
+  summarize(plays = n(), games = n_distinct(game_id)) %>% 
+  arrange(desc(plays))
+```
+

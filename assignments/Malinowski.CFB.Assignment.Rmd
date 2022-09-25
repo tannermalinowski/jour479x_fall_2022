@@ -1,0 +1,108 @@
+---
+title: "cfb"
+output: html_document
+date: "2022-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(cfbfastR)
+```
+
+
+```{r}
+tictoc::tic()
+pbp <- data.frame()
+seasons <- 2014:cfbfastR:::most_recent_cfb_season()
+progressr::with_progress({
+
+  pbp <- cfbfastR::load_cfb_pbp(seasons)
+})
+```
+
+
+```{r}
+tictoc::toc()
+```
+
+
+```{r}
+glimpse(pbp)
+```
+
+## Which team has had the most penalties on the first play of a series? ##
+```{r}
+pbp %>% 
+  filter(new_series == 1, drive_play_number == 1, play_type == 'Penalty', down == 1, pos_team == 'Alabama')
+
+pbp %>% 
+  filter(new_series == 1, drive_play_number == 1, play_type == 'Penalty', down == 1) %>% 
+  group_by(year) %>% 
+  summarize(plays = n(), games = n_distinct(game_id)) %>% 
+  arrange(desc(plays))
+```
+
+
+## Create a new column for point differential between the TeamScore and OpponentScore using mutate. You can use the same `logs` variable. ##
+```{r}
+logs <- logs %>%  
+  mutate(differential=TeamScore-OpponentScore)
+```
+
+## Create a regression (a linear model, like we did in this chapter (Links to an external site.)) investigating whether the number of penalties can predict the score differential. In a paragraph below this code block, describe the results: what is the p-value, and does it mean the results are random? Using the r-squared value, how much of the differential can be explained by penalty yards? How useful is this regression? ##
+```{r}
+fit <- lm(differential ~ Penalties, data = logs)
+summary(fit) 
+## p = 0.01856 ; R2 = 0.0003; RSE = 22.76 on 17290 DOF 
+
+fit <- lm(differential ~ PenaltyYds, data = logs)
+summary(fit)
+## p = 0.01808; R2 = 0.0003; RSE = 22.76 on 17290 DOF
+```
+Because the p-value is less than 0.05, it means the results are statistically significant -- the number of penalties affects point differential. However, an R-Squared value of 0.0003 suggests the differential can be explained by penalties less than 1% of the time, making this an ineffective model. Same deal when we consider penalty yards -- a p-value of less than 0.05 indicates statistical significance, but an R-squared of less than 1% points to an ineffective model.
+
+## Next, create a multiple regression model following the examples in this chapter (Links to an external site.). Instead of using the number of penalties alone, combine other numeric columns that describe mistakes/bad outcomes to try and predict the score differential with a higher degree of confidence. Look at the same values in the results you did before, but also take into account the residual standard error and the risk of multicollinearity - are you adding columns that explain each other instead of the differential? Below this code block, explain your choices and what you think the results say. ##
+
+```{r}
+
+fit <- lm(differential ~ Penalties + TurnoverMargin + DefFirstDownTotal + OppTDs + NetPenaltyYds + NetYdsPerPenalty + Incompletions + PlaysPerPenalty + DefPlaysPerPenalty + DefFirstDownPen + OppIncompletions, data = logs)
+summary(fit)
+## P-value = 2.2e-16 -- Adjusted R-squared = 0.6609 -- RSE = 13.23 on 17072 DOF ##
+```
+I went with these columns because I thought they covered a variety of negative outcomes, both individually and cumulative. Most of these columns were mutated; I experimented with numerous combinations and discovered this to be the one yielding the highest adjusted R-squared value. I thought turnover margin would be a decent indicator of point differential; the higher a team's turnover margin, the higher the point differential, and vice-versa. I also created a few new columns revolving around penalties: NetPenaltyYards (Penalties - DefPenalties), NetYardsPerPenalty (YardsPerPenalty - DefYardsPerPenalty), PlaysPerPenalty (TotalPlays/Penalties), DefPlaysPerPenalty (DefTotalPlays/DefPenalties) since penalties can kill a promising drive, or do the opposite by reviving a drive that was all but finished. I also found that Incompletions boosted by adjusted R-squared a little, too. Throughout my experimenting, I never had an issue with getting a p-value of less than 0.05, but it was tough to find an adjusted R-squared greater than 0.5. Based on this code, the combination of costly unforced errors and the turnover battle play a significant role in creating a model thqt can predict the differential of a game roughly 66% of the time. However, the largest residual I had was 106.35, indicating that my model actually isn't good at all.
+
+
+## Finally, use filter to narrow the game data so that you're only working with games that are close (you'll need to define what "close" means). Are your simple or multiple regression models better? Worse? Below this code block, explain your choices and what you think the results say. ##
+
+```{r}
+CloseGames <- logs %>%
+  filter(differential %in% (-8:8))
+
+CloseGames <- CloseGames %>% filter(!is.na(NetYdsPerPenalty))
+
+ResidualLogs <- logs %>%  mutate(predicted = predict(fit), residuals = residuals(fit))
+
+ResidualLogs <- ResidualLogs %>% arrange(desc(residuals))
+
+ResidualCloseGames <- ResidualCloseGames %>% arrange(desc(residuals))
+  
+logs <- logs %>% filter(!is.na(NetYdsPerPenalty))
+
+ResidualCloseGames <- CloseGames %>% 
+  mutate(predicted = predict(fit), residuals = residuals(fit))
+
+fit <- lm(differential ~ Penalties + TurnoverMargin + DefFirstDownTotal + OppTDs + NetPenaltyYds + NetYdsPerPenalty + Incompletions + PlaysPerPenalty + DefPlaysPerPenalty + OppIncompletions, data = CloseGames)
+summary(fit)
+
+fit <- lm(differential ~ Penalties + TurnoverMargin + DefFirstDownTotal + OppTDs + NetPenaltyYds + NetYdsPerPenalty + Incompletions + PlaysPerPenalty + DefPlaysPerPenalty + OppIncompletions, data = logs)
+summary(fit)
+```
+I defined "close" games as games decided by eight points or fewer, since these are considered one-score games. Interestingly, my model was worse off when considering the adjusted R-squared value, which decreased from 0.6609 to 0.2867. Additionally, the largest residual I had was 13.01, which is pretty high considering I was only working within a 16-point window. The decrease in my adjusted R-squared value and my high residual indicated to me that the columns I used to try to predict close games were not very effective at doing so. I was surprised by this, as I figured in games decided by eight points or fewer, each team's stats like total yards, first downs, etc. would be similar, whereas mistakes would be amplified. Based on my findings, I'm even more curious as to how close games are decided, as I thought for sure that the bad outcomes would play a more significant role in doing so. 
+
+## At the end of all that code, summarize what you've learned about the relationship between penalties and point differential and whether you think there's a story there or whether it's useful in adding context within a larger story. Would you use this in journalism and, if so, how? ##
+
+Based on the linear models I created, I learned that the relationship between penalties and point differential is not as strong as I believed it to be. I'd argue there isn't a  story explaining how penalites play a big role in point differential, but I'd say you could incorporate the relationship (or lack thereof) into a story from an angle that basically says: "Penalites don't affect the outcome of college football games as much as you think." With this angle, though, you would need to discuss what actually plays a role in deciding the outcome. Through my research, I found that a combination of turnover margin, opponent touchdowns, opponent first downs, along with a few other factors can decently predict the differential of a college football game. Based on how many columns I used to get an adjusted r-squared value of 0.66, I wouldn't rush to craft a story on this. Overall, I learned that a combination of mistakes and bad outcomes can somewhat dictate the final score of a college football game, but execution and good outcomes obviously carry a lot of weight, as well. I really became entrenched in trying to figure out how final scores are dictated, and this is a question I would be open to further pursuing throughout the semester.

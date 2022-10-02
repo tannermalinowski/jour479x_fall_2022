@@ -1,0 +1,56 @@
+---
+title: "Volleyball"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+volleyball <- read_csv("https://raw.githubusercontent.com/dwillis/NCAAWomensVolleyballData/main/data/ncaa_womens_volleyball_matchstats_2022.csv")
+```
+
+## I wanted to factor in the common ways to score in volleyball, so I focused on kills, aces and blocks. I also wanted to see which teams were the best at maximizing kills while limiting errors, so I created a column measuring how many kills a team records per every attack error. I also included digs to get an idea of how good teams are at preventing scores if an opponent's attack slips through the cracks of their block. To get a more comprehensive reading on these figures, I calculated them on a per-set average. ##
+```{r}
+volleyball <- volleyball %>%
+  mutate(kills_per_error = kills/errors, kills_per_set = kills/s, aces_per_set = aces/s, digs_per_set = digs/s, total_blocks = block_solos + block_assists, blocks_per_set = total_blocks/s)
+```
+
+## Once I examined my new columns, I wanted to find each team's average for them, with the exception of digs, as I decided that I wanted my z-scores to focus specifcally on scoring points, not preventing them. So, I grouped the teams together, then took their averarges in the four categories thoroguhout their matches so far in 2022. ## 
+```{r}
+team_zscore <- volleyball %>% 
+  group_by(team) %>% 
+  summarize(kills_per_error_avg = mean(kills_per_error), kills_per_set_avg = mean(kills_per_set), aces_per_set_avg = mean(aces_per_set), blocks_per_set_avg = mean(blocks_per_set))
+```
+
+## With my averages set up for each team, I calculated the z-scores for each of the four columns before adding them together to create a comprehensive total z-score column. ##
+```{r}
+teamzscore <- teamzscore %>% 
+  mutate(
+    avg_kills_per_set_zscore = as.numeric(scale(kills_per_set_avg, center = TRUE, scale = TRUE)),
+    avg_kills_per_error_zscore = as.numeric(scale(kills_per_error_avg, center = TRUE, scale = TRUE)),
+    avg_aces_per_set_zscore = as.numeric(scale(aces_per_set_avg, center = TRUE, scale = TRUE)),
+    avg_blocks_per_set_zscore = as.numeric(scale(blocks_per_set_avg, center = TRUE, scale = TRUE)),
+    total_zscore = avg_kills_per_set_zscore + avg_kills_per_error_zscore + avg_aces_per_set_zscore + avg_blocks_per_set_zscore)
+```
+
+## Once I received my results, I put them in desceding order based on total z-score. I found that the overall most proficient scoring team in college volleyball was from Maryland, but it wasn't the Terps. Rather, it was Towson, who is currently 16-0. Their total z-score of 8.56 sets them apart from the next-highest total z-score of 7.32, which belongs to No. 8-ranked Wisconsin. The Terps weren't that far down on the list, however, as their 5.71 total z-score was good for sixth in the country. Maryland is one of just 14 teams in the country with a total z-score greater than five. The Terps are the only team in the top 34 of total z-scores with a negative kills per set average z-score. In addition to Wisconsin and Maryland, Michigan also sits in the top ten with a total z-score of 5.46. ##
+```{r}
+teamzscore <- teamzscore %>% 
+  arrange(desc(total_zscore))
+```
+
+## I created a data team focused on Big Ten teams. Maryland has the second-highest total z-score in the Big Ten despite being winless in conference play. I'm assuming this is the case because they did most of their damage throughout their 9-3 nonconference slate. As expected based on their style of play, Maryland had the lowest kills per set average z-score (-0.336) and the highest blocks per set average z-score (3.37). They also had the second-highest aces per set average z-score (1.97).##
+```{r}
+bigtenzscores <- teamzscore %>% 
+filter(team %in% c("Illinois Fighting Illini", "Indiana Hoosiers", "Iowa Hawkeyes", "Maryland Terrapins, Terps", "Michigan Wolverines", "Michigan St. Spartans", "Minnesota Golden Gophers", "Nebraska Cornhuskers", "Northwestern Wildcats", "Ohio St. Buckeyes", "Penn St. Nittany Lions", "Purdue Boilermakers", "Rutgers Scarlet Knights", "Wisconsin Badgers"))
+```
+
+```
+
+

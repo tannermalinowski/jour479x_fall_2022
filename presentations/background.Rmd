@@ -1,0 +1,39 @@
+---
+title: "background"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+nfl <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2022.rds")
+```
+Research question:
+## Since 2002, what percentage of NFL teams who score on their first drive of the season make the playoffs? ##
+
+## This data is from Week One of the 2022 NFL regular season. 16 of 32 teams scored on their opening drive. ##
+```{r}
+weekoneopeningdrive <- nfl %>% 
+  filter(drive %in% c(1, 2), week == 1) %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+
+Do you need assistance in getting it?
+## I struggled to download the nflfastr package, but I'm pretty sure that's all I'd need for my research. I think I can run similar code in that dataframe as I did for the weekoneopeningdrivedataframe. ##
+
+What time frame do you want/need data from?
+## I want to use data from the 2002 realignment through the 2021 season. ##
+
+
+Will you have to improve or augment the data in order to answer your question? If so, how?
+## If I find that the first drive of the regular season is too specific, I may expand my research to account for the first drive of all games. I'd also like to factor in playoff data somehow to determine if first drives can indicate who may win the Super Bowl. ##
+
+Are there other examples of this kind of work (specific or general)? If so, provide them.
+## This was the top hit when I searched my question: https://fivethirtyeight.com/features/does-scoring-first-in-the-nfl-make-you-a-good-team-or-do-good-teams-just-score-first/. Doesn't exactly answer my question, but interesting nonetheless. ##

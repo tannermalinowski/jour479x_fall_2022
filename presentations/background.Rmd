@@ -9,12 +9,475 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 
 ```{r}
 library(tidyverse)
+library(nflfastR)
+```
+
+## Went season-by-season loading data. ##
+```{r}
+nfl22 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2022.rds")
+```
+
+```{r}
+weekone22 <- nfl22 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone22 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+
+```
+## 16 teams scored on their first drive of the 2022 season. ##
+```{r}
+nfl21 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2021.rds")
+```
+
+```{r}
+weekone21 <- nfl21 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone21 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 12 teams scored on their first drive of the 2021 season. ##
+
+```{r}
+nfl20 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2020.rds")
+```
+
+```{r}
+weekone20 <- nfl20 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone20 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 12 teams scored on their first drive of the 2020 season. ##
+
+```{r}
+nfl19 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2019.rds")
+```
+
+```{r}
+weekone19 <- nfl19 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone19 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## Nine teams scored on their first drive of the 2019 season. ##
+
+```{r}
+nfl18 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2018.rds")
+```
+
+```{r}
+weekone18 <- nfl18 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone18 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 8 teams scored on their first drive of the 2018 season. ##
+
+```{r}
+nfl17 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2017.rds")
+```
+
+```{r}
+weekone17 <- nfl17 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone17 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 10 teams socred on their first drive of the 2017 season. ##
+
+```{r}
+nfl16 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2016.rds")
+```
+
+```{r}
+weekone16 <- nfl16 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone16 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 12 teams scored on their first drive of the 2016 season. ##
+
+```{r}
+nfl15 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2015.rds")
+```
+
+```{r}
+weekone15 <- nfl15 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone15 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 12 teams scored on their first drive of the 2015 season. ##
+
+```{r}
+nfl14 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2014.rds")
 ```
 
 
 ```{r}
-nfl <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2022.rds")
+weekone14 <- nfl14 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone14 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
 ```
+## 12 teams scored on their first drive of the 2014 season. ##
+
+```{r}
+nfl13 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2013.rds")
+```
+
+```{r}
+weekone13 <- nfl13 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone13 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 6 teams scored on their first drive of the 2013 season. ##
+
+```{r}
+nfl12 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2012.rds")
+```
+
+```{r}
+weekone12 <- nfl12 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone12 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 9 teams scored on their first drive of the 2012 season. ##
+
+```{r}
+nfl11 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2011.rds")
+```
+
+```{r}
+weekone11 <- nfl11 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone11 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 15 teams scored on their first drive of the 2011 season. ##
+
+```{r}
+nfl10 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2010.rds")
+```
+
+```{r}
+weekone10 <- nfl10 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone10 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 8 teams scored on their first drive of the 2010 season. ##
+
+```{r}
+nfl09 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2009.rds")
+```
+
+```{r}
+weekone09 <- nfl09 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone09 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 6 teams score on their first drive of the 2009 season. ##
+
+```{r}
+nfl08 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2008.rds")
+```
+
+```{r}
+weekone08 <- nfl08 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone08 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 9 teams scored on their first drive of the season in 2008. ##
+
+```{r}
+nfl07 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2007.rds")
+```
+
+```{r}
+weekone07 <- nfl07 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone07 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 8 teams scored on their first drive of the 2007 season. ##
+
+```{r}
+nfl06 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2006.rds")
+```
+
+```{r}
+weekone06 <- nfl06 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone06 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 16 teams scored on their first drive of the 2006 season. ##
+
+```{r}
+nfl05 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2005.rds")
+```
+
+```{r}
+weekone05 <- nfl05 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone05 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 11 teams scored on their first drive of the 2005 season. ##
+
+```{r}
+nfl04 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2004.rds")
+```
+
+```{r}
+weekone04 <- nfl04 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone04 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 9 teams scored on their first drive of the 2004 season. ##
+
+```{r}
+nfl03 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2003.rds")
+```
+
+```{r}
+weekone03 <- nfl03 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone03 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+## 12 teams scored on their first drive of the 2003 season. ##
+
+```{r}
+nfl02 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2002.rds")
+```
+
+```{r}
+weekone02 <- nfl02 %>% 
+   filter(drive %in% c(1, 2), week == 1)
+
+weekone02 %>% 
+  filter(field_goal_result == "made" | extra_point_result == 'good' | extra_point_result == 'failed' | two_point_conv_result == 'success' | two_point_conv_result == 'failure')
+```
+
+## Creating a dataframe for all week one scores ##
+```{r}
+bigweekone <- rbind(weekone22, weekone21, weekone20, weekone19, weekone18, weekone17, weekone16, weekone15, weekone14, weekone13, weekone12, weekone11, weekone10, weekone09, weekone08, weekone07, weekone06, weekone05, weekone04, weekone03, weekone02)
+```
+
+## Narrowing this to touchdowns only ##
+```{r}
+weekonetouchdowns <- bigweekone %>% 
+filter(touchdown >0)
+```
+
+## Summarizing the data:
+
+2002:
+HOU -- missed playoffs
+IND -- lost in WC
+TEN -- lost in CC
+OAK -- lost SB
+SEA -- missed playoffs
+DEN -- missed playoffs
+
+2003:
+ARI -- missed playoffs
+MIN -- missed playoffs
+BUF -- missed playoffs
+NYJ -- missed playoffs
+TEN -- lost in DIV
+KC -- lost in DIV
+
+2004:
+CIN -- missed playoffs
+KC -- missed playoffs
+PIT -- lost CC
+WAS -- missed playoffs
+
+2005:
+NYG -- lost in WC
+SD -- missed playoffs
+NO -- missed playoffs
+CAR -- lost in CC
+KC -- missed playoffs
+OAK -- missed playoffs
+TEN -- missed playoffs
+PIT -- won SB
+
+2006:
+BAL -- lost in DIV
+NE -- lost in CC
+CHI -- lost SB
+DAL -- lost in WC
+MIN -- missed playoffs
+HOU -- missed playoffs
+SF -- missed playoffs
+ARI -- missed playoffs
+
+2007: 
+ATL -- missed playoffs
+CAR -- missed playoffs
+LAR -- missed playoffs
+DEN -- missed playoffs
+NE -- lost SB
+NYG -- won SB
+GB -- lost CC
+PIT -- lost WC
+
+2008:
+DAL -- missed playoffs
+DEN -- missed playoffs
+ATL -- missed playoffs
+PIT -- won SB
+PHI -- lost in CC
+NO -- missed playoffs
+NYG -- lost in DIV
+
+2009:
+NO -- won SB
+CAR -- missed playoffs
+
+2010:
+NE -- lost in DIV
+NO -- lost in WC
+
+2011:
+BUF -- missed playoffs
+ARI -- missed playoffs
+DAL -- missed playoffs
+MIN -- missed playoffs
+MIA -- missed playoffs
+NE -- lost SB
+GB -- lost in DIV
+LAR -- missed playoffs
+BAL -- lost in CC
+JAX -- missed playoffs
+
+2012:
+ATL -- lost in CC
+TB -- missed playoffs
+
+2013:
+LAC -- lost in DIV
+MIN -- missed playoffs
+IND -- lost in DIV
+PHI -- lost in WC
+
+2014:
+CHI -- missed playoffs
+MIA -- missed playoffs
+DET -- lost in WC
+DAL -- lost in DIV
+
+2015:
+CIN -- lost in WC
+DET -- missed playoffs
+ARI -- lost in CC
+LAR -- missed playoffs
+TEN -- missed playoffs
+TB -- missed playoffs
+
+2016:
+CAR -- missed playoffs
+CHI -- missed playoffs
+NYJ -- missed playoffs
+PHI -- missed playoffs
+DET -- lost in WC
+GB -- lost in CC
+NE -- won SB
+LAC -- missed playoffs
+
+2017:
+DET -- missed playoffs
+IND -- missed playoffs
+NE -- lost SB
+LV -- missed playoffs
+TEN -- lost in DIV
+PHI -- won SB
+CLE -- missed playoffs
+
+2018:
+BAL -- lost in WC
+CHI -- lost in WC
+LAC -- lost in DIV
+LV -- missed playoffs
+NYJ -- missed playoffs
+NO -- lost in CC
+TB -- missed playoffs
+
+2019:
+MIN -- lost in DIV
+BAL -- lost in DIV
+LV -- missed playoffs
+KC -- won SB
+NYG -- missed playoffs
+CLE -- missed playoffs
+WAS -- missed playoffs
+
+2020:
+BAL -- lost in DIV
+LAR -- lost in DIV
+MIN -- missed playoffs
+IND -- lost in WC
+PHI -- missed playoffs
+SEA -- lost in WC
+TB -- won SB
+
+2021:
+LAR -- Won SB
+CLE -- missed playoffs
+LAC -- missed playoffs
+MIA -- missed playoffs
+PHI -- lost in WC
+SEA -- missed playoffs ##
+
+
+## Wanted to narrow down my dataframe to contain a handful of specific columns. ##
+```{r}
+weekonetouchdownscondensed1 <- weekonetouchdowns %>% 
+select(posteam, season, td_team, td_player_name, td_prob, pass_touchdown, rush_touchdown, return_touchdown, passing_yards, rushing_yards, drive_play_count, play_type, yards_gained)
+```
+
+## I created a separate dataframe in Excel and imported it into R. I tried to create a line chart displaying the relationship between the percentage of teams who scored a touchdown on their first drive of the season made the playoffs, but the graph gave me a straight horizontal line. I want to learn how to create a line chart that effectively displays this data ... confused on what I'm missing/did incorrectly. Overall, though, I realized that there really isn't any correlation between scoring on your first drive of the season and making the playoffs, so I'm going to look elsewhere in the data and revamp my research question. ##
+```{r}
+library(ggplot2)
+
+ggplot() + geom_line(data=excel_df, aes(x=Season, y= 'Made Playoffs'))
+```
+
+## I noticed a column that gave the touchdown probability of each play, and I got curious. Not surprisingly, many of the least likley touchdowns occurred on return TDs. I'm considering finding each team's most improbable touchdown since 2002. Not very data-intensive, but I'd consider it to be a click-worthy article. ##
+```{r}
+weekonetouchdownscondensed1 %>% 
+arrange(td_prob)
+```
+
 Research question:
 ## Since 2002, what percentage of NFL teams who score on their first drive of the season make the playoffs? ##
 

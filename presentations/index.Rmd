@@ -1,0 +1,115 @@
+---
+title: First Play Interceptions
+author: Tanner Malinowski
+date: '2022-10-19'
+slug: first-play-interceptions
+categories: []
+tags: []
+---
+
+```{r}
+library(tidyverse)
+library(cfbfastR)
+```
+
+```{r}
+tictoc::tic()
+pbp <- data.frame()
+seasons <- 2014:cfbfastR:::most_recent_cfb_season()
+progressr::with_progress({
+
+  pbp <- cfbfastR::load_cfb_pbp(seasons)
+})
+```
+
+## Find first plays from scrimmage in the first half - how many are there?
+```{r}
+pbpfirstdrive <- pbp %>% 
+  filter(!grepl("Kickoff", play_type), half == 1, half_play_number == 2) %>% 
+  filter(!grepl("Kickoff Return (Offense)", play_type), half == 1, half_play_number == 2) %>% 
+  filter(down == 1)
+```
+## 7,119 plays
+
+## Count the number of play types for first plays from scrimmage to start the game.
+```{r}
+pbpfirstdrive %>% 
+  group_by(play_type) %>% 
+  summarize(total = n())
+```
+## 14 play types.
+
+```{r}
+firstplaysack <- pbpfirstdrive %>% 
+  filter(grepl("sack", play_text))
+```
+
+## How many plays were pass plays - receptions, incompletions, sacks, interceptions - including those plays that resulted in a touchdown?
+```{r}
+passplays <- c("Pass Incompletion", "Pass Reception", "Passing Touchdown", "Interception Return", "Interception Return Touchdown")
+```
+
+```{r}
+firstplaypassesnosacks <- pbpfirstdrive %>% 
+  filter(play_type %in% c("Pass Incompletion", "Pass Reception", "Passing Touchdown", "Interception Return", "Interception Return Touchdown"))
+```
+
+```{r}
+firstplaypasses <- rbind(firstplaypassesnosacks, firstplaysack)
+```
+## 3195 of the 7119 first plays were passing plays.
+
+## Isolate the number of first plays from scrimmage that began the game that resulted in an interception. How many are there? What percentage of all passing plays do they represent?
+```{r}
+intpct <- firstplaypasses %>%
+  select(year, play_type, pos_team) %>% 
+  group_by(play_type) %>% 
+  summarize(cnt=n()) %>% 
+  mutate(freq = (cnt / sum(cnt)*100)) %>%
+  arrange(desc(freq))
+```
+## 40 interception returns and 8 pick-sixes...total of 48/3195 = 1.5%
+
+
+
+## How many times has this happened each year we have data for? Which teams have done it more than once?
+```{r}
+picks <- c("Interception Return", "Interception Return Touchdown")
+
+intsbyszn <- firstplaypasses %>% 
+  select(year, play_type, pos_team) %>% 
+  filter(play_type %in% (picks))
+  
+intsbyszn %>% 
+  group_by(year) %>% 
+  summarize(total=n())
+
+## 2014 - 6 // 2015 - 9 // 2016 - 7 // 2017 - 6 // 2018 - 4 // 2019 - 4 // 2020 - 2 // 2021 - 1 // 2022 - 9
+
+intsbyszn %>% 
+  group_by(pos_team) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+
+## Purdue (3), Ball State (2), BYU (2), Colorado State (2), Indiana (2), Tulsa (2), UAB (2)
+```
+
+```{r}
+pbpfirstdrivesecondhalf <- pbp %>% 
+  filter(!grepl("Kickoff", play_type), half == 2, half_play_number == 2) %>% 
+  filter(!grepl("Kickoff Return (Offense)", play_type), half == 2, half_play_number == 2) %>% 
+  filter(down == 1)
+
+firstplaysacksecondhalf <- pbpfirstdrivesecondhalf %>% 
+  filter(grepl("sack", play_text))
+
+firstplaypassesnosackssecondhalf <- pbpfirstdrivesecondhalf %>% 
+  filter(play_type %in% c("Pass Incompletion", "Pass Reception", "Passing Touchdown", "Interception Return", "Interception Return Touchdown"))
+
+firstplaypassessecondhalf <- rbind(firstplaypassesnosackssecondhalf, firstplaysacksecondhalf)
+
+firstplaypickssecondhalf <- firstplaypassessecondhalf %>% 
+  filter(play_type %in% (picks))
+```
+## I found that isolating the first offensive play of the first half was more difficult than I thought it would be since some of the drive summaries weren't in order. Since 2014, teams are more likely to run the ball on their first offensive play of the first half. However, passing seems like a relatively safe option, as less than 2% of throws on a team's opening play of the game were intercepted since 2014. During that time, Purdue has thrown the most interceptions on such plays (3), while six other teams have each thrown two. Since Indiana's Connor Bazelak threw a pick on his team's first play of each half in Saturday's loss to Maryland, I wanted to create a dataframe showing data from the first play of the second half, as well. But my dataframe didn't include Bazelak's second-half interception, so I'd appreciate feedback on what I did incorrectly. 
+

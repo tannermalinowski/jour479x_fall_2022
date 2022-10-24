@@ -1,0 +1,1157 @@
+---
+title: "New Background"
+output: html_notebook
+---
+
+## I changed my research question. I want to see which NFL team has the highest percentage of scoring on the ensuing drive after logging a takeaway. Essentially, I looked to log each team's total takeways (fumble recoveries, interceptions and turnovers on downs) from the 2002-2021 seasons and divide it by how many ensuing offensive drives ended with either a touchdown or a field goal. I could have done this more efficiently, but I created separate dataframes for all the fumbles, interceptions and turnovers on downs for each season from 2002 - 2021, grouped them by team and counted them. I created a dataframe called "teamtakeawayssince02" that totaled up each team's fumble recoveries, interceptions and fourth down stops thoughout the 20-season window. Then I used the NFLFastR dataframes to filter out touchdowns and field goals when the previous drive ended in either a fumble, interception or turnover on downs, combining the dataframes -- with each one representing a season -- into one big frame called 'scoresofftovs.' After that, I combined the two dataframes and mutated a column dividing the number of scores off takeaways by total takeaways. ##
+
+```{r}
+library(tidyverse)
+library(nflfastR)
+library(stringr)
+```
+
+```{r}
+nfl21 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2021.rds")
+```
+
+```{r}
+nfl21 %>% 
+  group_by(fourth_down_failed) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+ints21 <- nfl21 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints21 <- ints21 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl20 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2020.rds")
+```
+
+```{r}
+ints20 <- nfl20 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints20 <- ints20 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl19 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2019.rds")
+```
+
+```{r}
+ints19 <- nfl19 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints19 <- ints19 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl18 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2018.rds")
+```
+
+```{r}
+ints18 <- nfl18 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints18 <- ints18 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl17 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2017.rds")
+```
+
+```{r}
+ints17 <- nfl17 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints17 <- ints17 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl16 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2016.rds")
+```
+
+```{r}
+ints16 <- nfl16 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints16 <- ints16 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl15 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2015.rds")
+```
+
+```{r}
+ints15 <- nfl15 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints15 <- ints15 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl14 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2014.rds")
+```
+
+```{r}
+ints14 <- nfl14 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints14 <- ints14 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl13 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2013.rds")
+```
+
+```{r}
+ints13 <- nfl13 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints13 <- ints13 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl12 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2012.rds")
+```
+
+```{r}
+ints12 <- nfl12 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints12 <- ints12 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl11 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2011.rds")
+```
+
+```{r}
+ints11 <- nfl11 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints11 <- ints11 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl10 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2010.rds")
+```
+
+```{r}
+ints10 <- nfl10 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints10 <- ints10 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl09 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2009.rds")
+```
+
+```{r}
+ints09 <- nfl09 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints09 <- ints09 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl08 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2008.rds")
+```
+
+```{r}
+ints08 <- nfl08 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints08 <- ints08 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl07 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2007.rds")
+```
+
+```{r}
+ints07 <- nfl07 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints07 <- ints07 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl06 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2006.rds")
+```
+
+```{r}
+ints06 <- nfl06 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints06 <- ints06 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl05 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2005.rds")
+```
+
+```{r}
+ints05 <- nfl05 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints05 <- ints05 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl04 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2004.rds")
+```
+
+```{r}
+ints04 <- nfl04 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints04 <- ints04 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl03 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2003.rds")
+```
+
+```{r}
+ints03 <- nfl03 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints03 <- ints03 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+nfl02 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2002.rds")
+```
+
+```{r}
+ints02 <- nfl02 %>% 
+  select(week, posteam, defteam, drive, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "INTERCEPTION", str_detect(desc, "INTERCEPTED"))
+```
+
+```{r}
+teamints02 <- ints02 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+team_ints_since_02 <- rbind(teamints02, teamints03, teamints04, teamints05, teamints06, teamints07, teamints08, teamints09, teamints10, teamints11, teamints12, teamints13, teamints14, teamints15, teamints16, teamints17, teamints18, teamints19, teamints20, teamints21) %>% 
+  group_by(defteam) %>%
+  summarize(sum(total))
+```
+
+```{r}
+fumbles21 <- nfl21 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles21 <- fumbles21 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles20 <- nfl20 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles20 <- fumbles20 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles19 <- nfl19 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles19 <- fumbles19 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles18 <- nfl18 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles18 <- fumbles18 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles17 <- nfl17 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles17 <- fumbles17 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles16 <- nfl16 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles16 <- fumbles16 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles15 <- nfl15 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles15 <- fumbles15 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles14 <- nfl14 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles14 <- fumbles14 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles13 <- nfl13 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles13 <- fumbles13 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles12 <- nfl12 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles12 <- fumbles12 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles11 <- nfl11 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles11 <- fumbles11 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles10 <- nfl10 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles10 <- fumbles10 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles09 <- nfl09 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles09 <- fumbles09 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles08 <- nfl08 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles08 <- fumbles08 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles07 <- nfl07 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles07 <- fumbles07 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles06 <- nfl06 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles06 <- fumbles06 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles05 <- nfl05 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles05 <- fumbles05 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles04 <- nfl04 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles04 <- fumbles04 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles03 <- nfl03 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles03 <- fumbles03 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fumbles02 <- nfl02 %>% 
+    select(week, posteam, defteam, drive, series_result, drive_start_transition, drive_end_transition, score_differential, desc) %>% 
+  filter(drive_end_transition == "FUMBLE", str_detect(desc, "RECOVERED"))
+```
+
+```{r}
+teamfumbles02 <- fumbles02 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+team_frs_since_02 <- rbind(teamfumbles02, teamfumbles03, teamfumbles04, teamfumbles05, teamfumbles06, teamfumbles07, teamfumbles08, teamfumbles09, teamfumbles10, teamfumbles11, teamfumbles12, teamfumbles13, teamfumbles14, teamfumbles15, teamfumbles16, teamfumbles17, teamfumbles18, teamfumbles19, teamfumbles20, teamfumbles21) %>%   
+  group_by(defteam) %>%
+  summarize(sum(total))
+```
+
+```{r}
+fourthdownstops21 <- nfl21 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns21 <- fourthdownstops21 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops20 <- nfl20 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns20 <- fourthdownstops20 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops19 <- nfl19 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns19 <- fourthdownstops19 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops18 <- nfl18 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns18 <- fourthdownstops18 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops17 <- nfl17 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns17 <- fourthdownstops17 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops16 <- nfl16 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns16 <- fourthdownstops16 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops15 <- nfl15 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns15 <- fourthdownstops15 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops14 <- nfl14 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns14 <- fourthdownstops14 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops13 <- nfl13 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns13 <- fourthdownstops13 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops12 <- nfl12 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns12 <- fourthdownstops12 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops11 <- nfl11 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns11 <- fourthdownstops11 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops10 <- nfl10 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns10 <- fourthdownstops10 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops09 <- nfl09 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns09 <- fourthdownstops09 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops08 <- nfl08 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns08 <- fourthdownstops08 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops07 <- nfl07 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns07 <- fourthdownstops07 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops06 <- nfl06 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns06 <- fourthdownstops06 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops05 <- nfl05 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns05 <- fourthdownstops05 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops04 <- nfl04 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns04 <- fourthdownstops04 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops03 <- nfl03 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns03 <- fourthdownstops03 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourthdownstops02 <- nfl02 %>% 
+  select(defteam, week, posteam, drive, series_result, fourth_down_failed) %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(series_result %in% "Turnover on downs")
+```
+
+```{r}
+teamdowns02 <- fourthdownstops02 %>% 
+  group_by(defteam) %>% 
+  summarize(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+fourth_down_stops_since_02 <- rbind(teamdowns02, teamdowns03, teamdowns04, teamdowns05, teamdowns06, teamdowns07, teamdowns08, teamdowns09, teamdowns10, teamdowns11, teamdowns12, teamdowns13, teamdowns14, teamdowns15, teamdowns16, teamdowns17, teamdowns18, teamdowns19, teamdowns20, teamdowns21) %>% 
+    group_by(defteam) %>%
+  summarize(sum(total))
+```
+
+```{r}
+teamtakeawaysince02 <- rbind(fourth_down_stops_since_02, team_frs_since_02, team_ints_since_02) %>%  rename(takeaways='sum(total)') %>% 
+group_by(defteam) %>% 
+  summarize(sum(takeaways))
+```
+
+```{r}
+nfl21 %>% 
+filter(drive_start_transition %in% (tov), drive_ended_with_score == 1) %>% 
+  filter(str_detect(desc, 'score')
+```
+
+```{r}
+score <- c("field goal is GOOD", "TOUCHDOWN")
+```
+
+```{r}
+scoresofftovs21 <- nfl21 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs20 <- nfl20 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+  
+```
+
+```{r}
+scoresofftovs19 <- nfl19 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs18 <- nfl18 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs17 <- nfl17 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs16 <- nfl16 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs15 <- nfl15 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs14 <- nfl14 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs13 <- nfl13 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs12 <- nfl12 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs11 <- nfl11 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs10 <- nfl10 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs09 <- nfl09 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs08 <- nfl08 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs07 <- nfl07 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs06 <- nfl06 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs05 <- nfl05 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs04 <- nfl04 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs03 <- nfl03 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs02 <- nfl02 %>% 
+  filter(str_detect(desc, "is GOOD")) %>% 
+  filter(drive_start_transition %in% c("INTERCEPTION", "FUMBLE", "DOWNS")) %>%
+  filter(series_result %in% c("Touchdown", "Field goal")) %>% 
+  select(posteam, defteam, drive_start_transition, desc, series_result) %>% 
+  group_by(posteam) %>% 
+  summarize(total=n())
+```
+
+```{r}
+scoresofftovs <- rbind (scoresofftovs02, scoresofftovs03, scoresofftovs04, scoresofftovs05, scoresofftovs06, scoresofftovs07, scoresofftovs08, scoresofftovs09, scoresofftovs10, scoresofftovs11, scoresofftovs12, scoresofftovs13, scoresofftovs14, scoresofftovs15, scoresofftovs16, scoresofftovs17, scoresofftovs18, scoresofftovs19, scoresofftovs20, scoresofftovs21) %>% 
+  group_by(posteam) %>% 
+  summarize(sum(total))
+```
+
+```{r}
+bigdf <- teamtakeawaysince02 %>% inner_join(scoresofftovs, by=c('team'))
+```
+
+```{r}
+bigdf <- bigdf %>% 
+  rename(takeaways='sum(takeaways)', scores_off_takeaways='sum(total)')
+```
+
+```{r}
+bigdf <- bigdf %>% 
+  mutate(pctscoresofftakeaways=(scores_off_takeaways/takeaways)*100) %>% 
+  arrange(desc(pctscoresofftakeaways))
+```
+
+## Based on what I calculated, from 2002-2021, the Ravens scored most frequently after forcing a turnover (42.7%), while the Browns scored the least frequently after doing so (33.95%). Since 2002, the Patriots have forced the most turnovers (836) while the Raiders have forced the fewest (517). Additionally, since 2002 the Patriots have scored the most times (345) after forcing a turnover, while the Lions have scored the fewest times (196). ##

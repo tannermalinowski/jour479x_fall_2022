@@ -1,0 +1,378 @@
+---
+title: "FifthTry"
+author: "Tanner Malinowski"
+date: "2022-11-01"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(nflfastR)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+```
+
+## I want to see which NFL teams are the best at making their opponents pay for turnovers. In other words, I want to find out which NFL teams score the most frequently on their ensuing offensive series, whether that be a touchdown or a field goal, after recovering a fumble, grabbing an interception or forcing a turnover on downs. I'll start by finding out how many turnovers each team forced in 2021, then caluclute how many of those turnovers ended up being retunred for touchdowns before calculating how many weren't returned for scores. From there, I'll filter the data to include drives that began with an interception, fumble recovery or fourth down stop and calculate what percent of those drives ended in touchdowns for field goals for each team.
+```{r}
+nfl21 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2021.rds")
+```
+
+## Turnover type 1 of 5: Interceptions 
+##I wanted to be be methodical here, so I wanted to make a dataframe for each type of turnover. 
+```{r}
+ints21 <- nfl21 %>% 
+  filter(interception == 1) %>% 
+  mutate(type_of_turnover = case_when(
+    interception == 1 ~ 'interception'))
+```
+
+## To see which team led the league in 2021 in pick-sixes, I'll narrow down my dataframe.
+```{r}
+team_pick_sixes_21 <- ints21 %>% 
+filter(touchdown == 1) %>% 
+  group_by(defteam) %>% 
+  summarize(picksixes=n()) %>% 
+  arrange(desc(picksixes))
+```
+
+## To see which teams had the most interceptions in 2021, I'll create a new dataframe.
+```{r}
+team_ints_21 <- ints21 %>% 
+  group_by(defteam) %>% 
+  summarize(ints=n()) %>% 
+  arrange(desc(ints))
+```
+
+## Now I have enough information to create a dataframe displaying each team's interceptions, pick-sixes and non-pick-six interceptions. I'll re-arrange the column names and call it 'teampicksixes21'.
+```{r}
+full_join(team_pick_sixes_21, team_ints_21, by = "defteam") %>% 
+mutate(nopicksix = ints-picksixes) -> team_pick_sixes_21
+
+col_order <- c('defteam', 'ints', 'picksixes', 'nopicksix')
+
+team_pick_sixes_21 <- team_pick_sixes_21[,col_order]
+```
+
+## Turnover type 2 of 5: Fourth down stops
+## Not counting per team just yet, instead I want to see how many there were throughout the league in 2021.
+```{r}
+fourth_down_stuffs_21 <- nfl21 %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(drive_end_transition == 'DOWNS')
+```
+
+## Since any return TDs on fourth-down stops would be accounted for by either pick-sixes or scoop-and-scores, I can just create a dataframe that shows which teams recorded the most fourth-down stops this season.
+```{r}
+team_fourth_down_stuffs_21 <- nfl21 %>% 
+  filter(fourth_down_failed == 1) %>% 
+  filter(drive_end_transition == 'DOWNS')%>% 
+  group_by(defteam) %>% 
+  summarize(fourth_down_stuffs=n()) %>% 
+  arrange(desc(fourth_down_stuffs))
+```
+
+## Turnover type 3 of 5: Scrimmage Recoveries.
+##This is where it gets complicated. I divided fumbles into three categories: scrimmage fumbles, kick return fumbles and punt return fumbles. Scrimmage fumbles are fumbles that occur when the play type was either a run or a pass, so I'll start there, again first by just seeing how many there were in the NFL in 2021.
+```{r}
+scrimmage_recoveries_21 <- nfl21 %>% 
+  filter(play_type %in% c('run', 'pass'), fumble_lost == 1) %>% 
+  filter(drive_end_transition == 'FUMBLE') %>% 
+  mutate(type_of_turnover = case_when(
+    fumble_lost == 1 ~ 'scrimmage fumble'
+  ))
+```
+
+## Like I did for the pick-sixes, I want to find out how many of these scrimmage recoveries were returned for touchdowns and calculate this for each team.
+```{r}
+team_scrimmage_scoop_and_scores_21 <- scrimmage_recoveries_21 %>% 
+  filter(touchdown == 1) %>% 
+  group_by(defteam) %>% 
+  summarize(scoopandscores=n()) %>% 
+  arrange(desc(scoopandscores))
+```
+
+## Now, I'll do scrimmage recoveries that weren't returned for touchdowns for each team.
+```{r}
+team_scrimmage_recoveries_21 <- scrimmage_recoveries_21 %>% 
+  group_by(defteam) %>% 
+  summarize(scrimmagerecoveries=n()) %>% 
+  arrange(desc(scrimmagerecoveries))
+```
+
+## Turnover type 4 of 5: Punt Fumble Recoveries
+## How many punts were fumbled and recovered by the punting team in 2021?
+```{r}
+punt_recovereies_21 <- nfl21 %>% 
+  filter(play_type == 'punt', fumble_lost == 1)
+```
+
+## Onto punt scoop and scores. These are pretty rare, so I'll first need to see if any even occurred in 2021.
+```{r}
+punt_scoop_and_scores <- nfl21 %>% 
+  filter(play_type == 'punt', fumble_lost == 1, touchdown == 1)
+```
+
+## There was one by the Bears, so punt scoop and scores deserve their own dataframe. Unlike in the other dataframes, where fumble recoveries are credited to the 'defteam,' fumble recoveries on punts are credited to the 'posteam' since they had the ball when the play started. For consistency, I'll rename the posteam column to defteam, since this is the team that recovered the fumble.
+```{r}
+team_punt_scoop_and_scores_21 <- nfl21 %>% 
+  filter(play_type == 'punt', fumble_lost == 1, touchdown == 1) %>% 
+  rename(recoveryteam = posteam) %>% 
+  rename(fumblingteam = defteam) %>%
+  rename(defteam = recoveryteam) %>% 
+  rename(posteam = fumblingteam) %>% 
+  group_by(defteam) %>% 
+  summarize(puntscoopandscores=n()) %>% 
+  arrange(desc(puntscoopandscores))
+```
+
+## Now I can count each team's punt fumble recoveries that weren't returned for touchdowns. Again, I need to rename the posteam column to defteam to remain consistent.
+```{r}
+team_punt_recoveries_21 <- nfl21 %>% 
+  filter(play_type == 'punt', fumble_lost == 1) %>% 
+  rename(recoveryteam = posteam) %>% 
+  rename(fumblingteam = defteam) %>%
+  rename(defteam = recoveryteam) %>% 
+  rename(posteam = fumblingteam) %>% 
+  group_by(defteam) %>% 
+  summarize(puntrecoveries=n()) %>% 
+  arrange(desc(puntrecoveries))
+```
+
+## Turnover type 5 of 5: Kickoff Fumble Recoveries
+## Assuming these will be rare especially given how many touchbacks there are.
+```{r}
+kickoff_recoveries_21 <- nfl21 %>% 
+  filter(play_type == 'kickoff', fumble_lost == 1)
+```
+
+## Finally, onto team kickoff recoveries. In 2021, there were no scoop and scores on kickoffs, so I can jump straight to counting the number of kickoff fumble recoveries for each squad.
+```{r}
+team_kickoff_recoveries_21 <- nfl21 %>% 
+  filter(play_type == 'kickoff', fumble_lost == 1) %>% 
+  group_by(defteam) %>% 
+  summarize(kickoff_recoveries=n()) %>% 
+  arrange(desc(kickoff_recoveries))
+```
+
+## With scrimmage, punt and kickoff fumbles done, now I want to combine all scoop and scores into a single dataframe. I'll start with scrimmage scoop-and-scores. I want to combine the column containing the number of each team's scrimmage scoop and scores into a dataframe with a column containing each team's scrimmage fumble recoveries and join them by defensive team, or 'defteam.' I'll rename it to 'teamscrimmagescoopandscores21' for clarity. I also want to replace NA data with zeroes.
+```{r}
+full_join(team_scrimmage_scoop_and_scores_21, team_scrimmage_recoveries_21, by = "defteam") %>% 
+  mutate(noscrimmagescoopandscore = scrimmagerecoveries - scoopandscores) -> team_no_scoop_and_scores_21
+
+fum_col_order <- c('defteam', 'scrimmagerecoveries', 'scoopandscores', 'noscrimmagescoopandscore')
+
+team_scrimmage_scoop_and_scores_21 <- team_no_scoop_and_scores_21[,fum_col_order]
+
+team_scrimmage_scoop_and_scores_21[is.na(team_scrimmage_scoop_and_scores_21)] <- 0
+```
+
+## Now, I have a dataframe that shows the team, the number of scrimmage recoveries they had, the number that were returned for touchdowns and the number that weren't returned for touchdowns. Next I'll create a similar dataframe, but this one will be for punt scoop-and-scores.
+```{r}
+full_join(team_punt_scoop_and_scores_21, team_punt_recoveries_21, by = "defteam") -> team_punt_scoop_and_scores_21
+ 
+  team_punt_scoop_and_scores_21 <- team_punt_scoop_and_scores_21 %>%  
+   mutate(nopuntscoopandscore = puntrecoveries - puntscoopandscores)
+
+team_punt_scoop_and_scores_21[is.na(team_punt_scoop_and_scores_21)] <- 0
+```
+
+## With dataframes measuring each team's interceptions, pick-sixes, fumble recoveries, scoop and scores and fourth-down stops, I can combine these into a single dataframe with full_join. First, I want to combine all types of return scores into a single dataframe.
+```{r}
+full_join(team_pick_sixes_21, team_punt_scoop_and_scores_21, by = 'defteam') -> returns_part_one_21
+
+returns_part_one_21[is.na(returns_part_one_21)] <- 0
+
+full_join(returns_part_one_21, team_scrimmage_scoop_and_scores_21, by = 'defteam') %>% 
+  mutate(returnscores = picksixes + puntscoopandscores + scoopandscores) -> return_scores_21
+
+return_scores_21_condensed <- return_scores_21 %>% 
+  select(defteam, returnscores) %>%
+  rename(team=defteam) %>% 
+  arrange(desc(returnscores))
+```
+
+## Now I want to put it all together. I want to have a dataframe displaying each team's takeaways, their takeaway return touchdowns, their takeaway returns that don't end in touchdowns and the percentage of their takeaways that are returned for touchdowns.
+```{r}
+full_join(team_ints_21, team_fourth_down_stuffs_21, by = 'defteam') -> chart_one
+
+full_join(chart_one, team_scrimmage_recoveries_21, by = 'defteam') -> chart_two
+
+full_join(chart_two, team_kickoff_recoveries_21, by = 'defteam') -> chart_three
+
+full_join(chart_three, team_punt_recoveries_21, by = 'defteam') -> chart_five
+
+chart_five <- chart_five %>% 
+  rename(team=defteam)
+
+full_join(chart_five, return_scores_21_condensed, by = 'team') -> chart_six
+
+chart_seven <- chart_six 
+  
+chart_seven[is.na(chart_seven)] <- 0
+  
+chart_seven <- chart_seven %>% 
+   mutate(takeaways = ints + fourth_down_stuffs + scrimmagerecoveries + kickoff_recoveries + puntrecoveries)
+```
+
+## To put things together even more, I'll create a dataframe that renames returnscores to takeaway_return_tds and mutate a column that measures non-touchdown returns off takeaways by subtracting takeaway return touchdowns from total takeaways. I'll also find out what percentage of takeaways are returned for scores by mutating a column that divides takeaway return touchdowns by total takeaways and multiplies it by 100. 
+```{r}
+team_takeaways_and_return_scores_21 <- chart_seven %>% 
+  select(team, returnscores, takeaways) %>% 
+  rename(takeaway_return_tds=returnscores) %>% 
+  mutate(no_return_td_takeaways = takeaways - takeaway_return_tds) %>% 
+  mutate(takeaway_return_td_pct = (takeaway_return_tds /takeaways)*100) %>% 
+  arrange(desc(takeaway_return_td_pct))
+```
+
+## I want to display the distribution of takeaways in 2021. I'll categorize it based on interceptions, downs, scrimmage fumble recoveries, punt fumble recoveries and kickoff fumble recoveries. Overall, I want to display all takeaways during the 2021 NFL season and break it into five sections, so I'll use a waffle chart.
+```{r}
+turnovers <- c('Interceptions'=463, 'Downs'=352, 'Scrimmage Recoveries'=245, 'Punt Recoveries'=23, 'Kickoff Recoveries'=7)
+```
+
+## My initial chart was hard to see since there were so many squares, so I cut the number of squares down by half to better display the data.
+```{r}
+waffle(turnovers/2, 
+        rows = 15, 
+        title="NFL Takeaways 2021", 
+        xlab="1 square = 2 takeaways", 
+        colors = c("black", "red", "green", "blue", "orange"))
+        
+```
+## Now comes the net big step. I want to see how many of these non-touchdown-return takeaways were turned into points on the team's subsequent offensive series. I'm also curious as to how many field goals each team kicked compared to how many touchdowns they scored off turnovers.   
+```{r}
+nfl_21_scores <- nfl21 %>% 
+  mutate(score = case_when(
+    touchdown == 1 ~ "touchdown",
+    field_goal_result == "made" ~ "field goal",
+    touchdown != 1 ~ "no score",
+    field_goal_result != "made" ~ "no score"
+  ))
+```
+
+## At this point, I can group by team. I want to combine each team's touchdowns and field goals scored off of takeaways. I should have 32 rows, one for each team.
+```{r}
+team_scores_off_tovs_21 <- nfl_21_scores %>% 
+  rename(team=posteam) %>%
+  filter(drive_start_transition %in% c('DOWNS', 'FUMBLE', 'INTERCEPTION', 'MUFFED_PUNT')) %>% 
+  filter(score %in% c('touchdown', 'field goal')) %>% 
+  group_by(team) %>% 
+  summarize(scoresofftovs=n()) %>% 
+  arrange(desc(scoresofftovs))
+```
+
+## I want to narrow that dataframe down a bit. I want to focus on touchdowns, so I'll filter just by touchdowns and create a new column conveying the type of score, which in this case is a touchdown.
+```{r}
+team_touchdowns_off_takeaways_21 <- nfl_21_scores %>% 
+  rename(team=posteam) %>% 
+  filter(drive_start_transition %in% c('DOWNS', 'FUMBLE', 'INTERCEPTION', 'MUFFED_PUNT')) %>%
+  filter(score == 'touchdown') %>% 
+  group_by(team) %>% 
+  summarize(scores_tds_off_takeaways = n()) %>% 
+  arrange(desc(scores_tds_off_takeaways)) %>% 
+    mutate(score_type=case_when(
+    scores_tds_off_takeaways >= '1' ~ 'touchdown')
+  ) %>% 
+  rename(count=scores_tds_off_takeaways)
+```
+
+## Next, I want to do the same thing, but for field goals.
+```{r}
+team_field_goals_off_takeaways_21 <- nfl_21_scores %>% 
+  rename(team=posteam) %>% 
+  filter(drive_start_transition %in% c('DOWNS', 'FUMBLE', 'INTERCEPTION', 'MUFFED_PUNT')) %>%
+  filter(score == 'field goal') %>% 
+  group_by(team) %>% 
+  summarize(scores_fgs_off_takeaways = n()) %>% 
+  arrange(desc(scores_fgs_off_takeaways)) %>% 
+    mutate(score_type=case_when(
+    scores_fgs_off_takeaways >= '1' ~ 'field goal')
+  ) %>% 
+  rename(count=scores_fgs_off_takeaways)
+```
+
+## Time to put this in a graph. I'll use stacked bar chart to display each team's touchdown and field goals on their ensuing offensive drive after a takeaway. This bar chart shows each team's scores -- broken into field goals and touchdowns -- on their ensuing offensive drive following a takeaway.
+```{r}
+full_join(team_touchdowns_off_takeaways_21, team_field_goals_off_takeaways_21, by = 'team') -> team_tds_and_fgs_off_takeaways_21
+
+long_team_tds_and_fgs_off_takeaways_21 <- rbind(team_touchdowns_off_takeaways_21, team_field_goals_off_takeaways_21) %>% 
+  group_by(team) %>% 
+  arrange(team)
+
+ggplot() + 
+  geom_bar(data=long_team_tds_and_fgs_off_takeaways_21, aes(x=reorder(team, count), weight=count, fill=score_type)) + 
+  coord_flip()
+```
+
+```{r}
+full_join(return_scores_21_condensed, team_scores_off_tovs_21, by = 'team') -> chart_eight
+```
+
+```{r}
+full_join(team_takeaways_and_return_scores_21, chart_eight, by = 'team') -> chart_nine
+  
+scores_off_takeaways_percent_21 <- chart_nine %>% 
+  select(team, takeaways, returnscores, scoresofftovs, takeaway_return_td_pct) %>% 
+  mutate(totalscoresofftovs = returnscores + scoresofftovs) %>% 
+  mutate(total_scores_off_takeaways_pct = (totalscoresofftovs / takeaways)*100)
+
+scores_off_takeaways_percent_21_condensed <- scores_off_takeaways_percent_21 %>% 
+  select(team, total_scores_off_takeaways_pct) %>% 
+  arrange(desc(total_scores_off_takeaways_pct))
+
+```
+
+```{r}
+library(scales)
+```
+
+```{r}
+ggplot() + 
+  geom_bar(
+    data=scores_off_takeaways_percent_21_condensed, 
+    aes(x=reorder(team, `total_scores_off_takeaways_pct`),
+        weight=`total_scores_off_takeaways_pct`)) + 
+  scale_y_continuous(labels=comma) + 
+  labs(
+    title="NFL Teams' Points off Turnover % 2021", 
+    x="Team", 
+    y="Points off Turnover Percentage") + 
+  theme_minimal() + 
+  coord_flip()
+```
+
+```{r}
+bubble_df <- chart_nine %>% 
+  select(team, takeaways, scoresofftovs) %>% 
+  mutate(wins = case_when(
+    team %in% c('GB', 'TB') ~ 13,
+    team %in% c('DAL', 'KC', 'LA', 'TEN') ~ 12,
+    team %in% c('ARI', 'BUF') ~ 11,
+    team %in% c('CIN', 'LV', 'NE', 'SF') ~ 10,
+    team %in% c('PIT', 'IND', 'LAC', 'MIA', 'NO', 'PHI') ~ 9,
+    team %in% c('BAL', 'CLE', 'MIN') ~ 8,
+    team %in% c('ATL', 'DEN', 'SEA', 'WAS') ~ 7,
+    team == 'CHI' ~ 6,
+    team == 'CAR' ~ 5,
+    team %in% c('HOU', 'NYG', 'NYJ') ~ 4,
+    team %in% c('DET', 'JAX') ~ 3
+  )) %>% 
+  rename(scores_off_takeaways = scoresofftovs) %>% 
+  mutate(scores_off_takeaways_percent = (scores_off_takeaways/takeaways)*100) %>% 
+  arrange(desc(scores_off_takeaways_percent))
+
+ggplot() + 
+  geom_point(data=bubble_df, aes(x=scores_off_takeaways_percent, y=wins)) +
+  geom_smooth(data=bubble_df, aes(x=scores_off_takeaways_percent, y=wins), method="lm")
+```
+
+```{r}
+ggplot() + 
+  geom_point(
+    data=bubble_df, 
+    aes(x=scores_off_takeaways, y=takeaways, size=wins),
+    alpha = .3) + 
+  scale_size(range = c(3, 8), name="Wins")
+```
+
+

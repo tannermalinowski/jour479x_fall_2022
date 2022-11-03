@@ -1,115 +1,85 @@
 ---
-title: First Play Interceptions
+title: NFL Red Zone EPA
 author: Tanner Malinowski
-date: '2022-10-19'
-slug: first-play-interceptions
-categories: []
+date: '2022-11-01'
+slug: nfl-red-zone-epa
+categories: ["Charts", "NFL"]
 tags: []
 ---
-
 ```{r}
 library(tidyverse)
-library(cfbfastR)
+library(nflreadr)
 ```
 
 ```{r}
-tictoc::tic()
-pbp <- data.frame()
-seasons <- 2014:cfbfastR:::most_recent_cfb_season()
-progressr::with_progress({
-
-  pbp <- cfbfastR::load_cfb_pbp(seasons)
-})
+nfl22 <- load_pbp(
+  seasons = 2022,
+  file_type = getOption("nflreadr.prefer", default = "rds"))
 ```
 
-## Find first plays from scrimmage in the first half - how many are there?
+## First, we need to confirm that Miami ran 20 plays from inside the red zone during the first three weeks of the season. It's important to note that the red zone is anything inside the 20 yard line; the red zone does not include the 20 yard line. Additionally, when I first ran the code, I got 36 plays, but once I narrowed the play types to scrimmage plays (runs and passes) I got 20 plays.
 ```{r}
-pbpfirstdrive <- pbp %>% 
-  filter(!grepl("Kickoff", play_type), half == 1, half_play_number == 2) %>% 
-  filter(!grepl("Kickoff Return (Offense)", play_type), half == 1, half_play_number == 2) %>% 
-  filter(down == 1)
+miami_red_zone_weeks_one_thru_three <- nfl22 %>% 
+  filter(posteam == 'MIA', week %in% c('1', '2', '3'), yardline_100 < 20, play_type %in% c('run', 'pass'))
 ```
-## 7,119 plays
 
-## Count the number of play types for first plays from scrimmage to start the game.
+## Let's confirm that the Dolphins ran 20 plays from inside the 20 from weeks 1-3 in 2022.
 ```{r}
-pbpfirstdrive %>% 
-  group_by(play_type) %>% 
-  summarize(total = n())
+miami_red_zone_weeks_one_thru_three %>% 
+  nrow
 ```
-## 14 play types.
 
+## To confirm Miami's total red zone EPA from weeks 1-3, we'll add up each of the 20 play's respective EPA using the sum() function.
 ```{r}
-firstplaysack <- pbpfirstdrive %>% 
-  filter(grepl("sack", play_text))
+sum(miami_red_zone_weeks_one_thru_three$epa)
 ```
 
-## How many plays were pass plays - receptions, incompletions, sacks, interceptions - including those plays that resulted in a touchdown?
+## Now, let's find Miami's red zone EPA and snap count for the entire 2022 season so far (through eight weeks). This code will look similar to our miami_red_zone_weeks_one_thru_three dataframe, but now we don't need to include the week in our filter. This dataframe will isolate all scrimmage plays run by the Dolphins inside their opponent's 20 yard line through the first eight weeks of the 2022 NFL season.
 ```{r}
-passplays <- c("Pass Incompletion", "Pass Reception", "Passing Touchdown", "Interception Return", "Interception Return Touchdown")
+miami_red_zone_epa_2022 <- nfl22 %>% 
+  filter(posteam == 'MIA', yardline_100 < 20, play_type %in% c('run', 'pass'))
 ```
 
+## Let's compare Miami's current red zone EPA (from weeks 1 to 8) and compare it to its red zone EPA from weeks 1-3. We can use the quickly use the summarize function.
 ```{r}
-firstplaypassesnosacks <- pbpfirstdrive %>% 
-  filter(play_type %in% c("Pass Incompletion", "Pass Reception", "Passing Touchdown", "Interception Return", "Interception Return Touchdown"))
+miami_red_zone_epa_2022 %>% 
+  summarize(sum(epa))
 ```
-
+## So, Miami's red zone EPA has increased by about 0.9 since week 3. Compared to the other teams in FiveThirtyEight's article, it seems like Miami has relatively stayed the course after its hot start, something few other teams in the last five years with similar hot starts have done. However, the 'Fins still have nine games to play, so they could definitely regress as the season wears on, just as many other teams in the chart have. What stands out is how many red zone snaps the Dolphins averaged in the firt three weeks of the season. They ran 20 plays from inside the 20 throughout the season's first three weeks. The team who ran the next most plays, the Ravens in 2018, ran 12 plays. I'll be interested to see if Miami's high snap count in the red zone has any impact on its EPA for the rest of the season. Now, let's look at every team's red zone EPA through the season's first eight weeks, and let's include their red zone snap counts too. We won't need to filter weeks, so we'll just focus on yard line and play type.
 ```{r}
-firstplaypasses <- rbind(firstplaypassesnosacks, firstplaysack)
+rz_epa_and_snaps_thru_week8 <- nfl22 %>% 
+  group_by(posteam) %>% 
+  filter(yardline_100 < 20, play_type %in% c('run', 'pass')) %>% 
+  summarize(red_zone_epa_thru_week8=sum(epa), rz_snaps_thru_week8=n())
 ```
-## 3195 of the 7119 first plays were passing plays.
 
-## Isolate the number of first plays from scrimmage that began the game that resulted in an interception. How many are there? What percentage of all passing plays do they represent?
+## Now let's see how teams' respective red zone EPAs fared from weeks 1-3. This time, we'll need to include the week in our filter. 
 ```{r}
-intpct <- firstplaypasses %>%
-  select(year, play_type, pos_team) %>% 
-  group_by(play_type) %>% 
-  summarize(cnt=n()) %>% 
-  mutate(freq = (cnt / sum(cnt)*100)) %>%
-  arrange(desc(freq))
+rz_epa_and_snaps_thru_week3 <- nfl22 %>% 
+  group_by(posteam) %>% 
+  filter(week %in% c('1', '2', '3'), yardline_100 < 20, play_type %in% c('run', 'pass')) %>% 
+  summarize(red_zone_epa_thru_week3=sum(epa), rz_snaps_thru_week3=n())
 ```
-## 40 interception returns and 8 pick-sixes...total of 48/3195 = 1.5%
 
-
-
-## How many times has this happened each year we have data for? Which teams have done it more than once?
+## If we combine the previous two dataframes, we can quickly compare each NFL team's red zone EPA from weeks 1-3 with their red zone EPA throughout the season's first eight weeks. We can also compare red zone snap counts, too.
 ```{r}
-picks <- c("Interception Return", "Interception Return Touchdown")
-
-intsbyszn <- firstplaypasses %>% 
-  select(year, play_type, pos_team) %>% 
-  filter(play_type %in% (picks))
-  
-intsbyszn %>% 
-  group_by(year) %>% 
-  summarize(total=n())
-
-## 2014 - 6 // 2015 - 9 // 2016 - 7 // 2017 - 6 // 2018 - 4 // 2019 - 4 // 2020 - 2 // 2021 - 1 // 2022 - 9
-
-intsbyszn %>% 
-  group_by(pos_team) %>% 
-  summarize(total=n()) %>% 
-  arrange(desc(total))
-
-## Purdue (3), Ball State (2), BYU (2), Colorado State (2), Indiana (2), Tulsa (2), UAB (2)
+full_join(rz_epa_and_snaps_thru_week3, rz_epa_and_snaps_thru_week8, by = 'posteam') -> epa_weeks_3_and_8
 ```
 
+## To get a better visualization of how each team's red zone EPA has changed from after week 3 to after week 8, we can create a dumbbell plot. We want our teams to sit on the y-axis and order them based on their red zone EPA through week 8, so the team with the highest red zone EPA through week 8 will be at the top of the graph. Each team's red zone EPA through week 8 will be marked by a blue dot, while their red zone EPA through week 3 will be marked by a green dot. 
 ```{r}
-pbpfirstdrivesecondhalf <- pbp %>% 
-  filter(!grepl("Kickoff", play_type), half == 2, half_play_number == 2) %>% 
-  filter(!grepl("Kickoff Return (Offense)", play_type), half == 2, half_play_number == 2) %>% 
-  filter(down == 1)
+ggplot() + 
+  geom_dumbbell(
+    data=epa_weeks_3_and_8, 
+    aes(y=reorder(posteam, red_zone_epa_thru_week8), x=red_zone_epa_thru_week3, xend=red_zone_epa_thru_week8), 
+    size = 1,
+  colour = "grey",
+    colour_x = "green",
+    colour_xend = "blue") + 
+  theme_minimal() +
+  labs(title = "NFL Red Zone EPAs by Team Through Weeks 3 and 8, Respectively", subtitle = "Jacksonville has gone ice-cold as Florida's weather dips into the frigid mid-80s.", x="Red Zone EPAs | Week 3 = Green, Week 8 = Blue", y="Team")
 
-firstplaysacksecondhalf <- pbpfirstdrivesecondhalf %>% 
-  filter(grepl("sack", play_text))
-
-firstplaypassesnosackssecondhalf <- pbpfirstdrivesecondhalf %>% 
-  filter(play_type %in% c("Pass Incompletion", "Pass Reception", "Passing Touchdown", "Interception Return", "Interception Return Touchdown"))
-
-firstplaypassessecondhalf <- rbind(firstplaypassesnosackssecondhalf, firstplaysacksecondhalf)
-
-firstplaypickssecondhalf <- firstplaypassessecondhalf %>% 
-  filter(play_type %in% (picks))
 ```
-## I found that isolating the first offensive play of the first half was more difficult than I thought it would be since some of the drive summaries weren't in order. Since 2014, teams are more likely to run the ball on their first offensive play of the first half. However, passing seems like a relatively safe option, as less than 2% of throws on a team's opening play of the game were intercepted since 2014. During that time, Purdue has thrown the most interceptions on such plays (3), while six other teams have each thrown two. Since Indiana's Connor Bazelak threw a pick on his team's first play of each half in Saturday's loss to Maryland, I wanted to create a dataframe showing data from the first play of the second half, as well. But my dataframe didn't include Bazelak's second-half interception, so I'd appreciate feedback on what I did incorrectly. 
+## After their hot start, the Dolphins have reamined stable in the red zone, especially compared to some of the other teams on the chart (looking at you, Duval). Kansas City and Minnesota have improved their respective red zone EPAs the most, while Denver, Jacksonville, Washington and Chicago have struggled mightily in the last few weeks. Detroit started out similarily well but has cooled off since. Meanwhile, the Eagles opened the season in the middle of the pack of red zone EPA but have soared to one of the NFL's highest red zone's EPA since. To me, this shows that you can't take too much stock in a team's red zone EPA through the first three weeks of the season.
+
 

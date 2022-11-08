@@ -1,9 +1,21 @@
 ---
-title: "FifthTry"
+title: "Final Presentation"
 author: "Tanner Malinowski"
-date: "2022-11-01"
+date: "2022-11-08"
 output: html_document
 ---
+
+## As a Ravens fan, last season was ... unique, to say the least. A rampant injury bug, mind-boggling inconsistency and a cruel dose of one-point losses culminated in an 8-9 finish that saw the team plummet from the conference's top seed to the AFC North's cellar dweller in the span of six weeks. Something that I noticed throughout the chaos was the team's inability to make its opponent pay for turning the ball over. The Ravens didn't force that many turnovers to begin with, and even when they did, it seemed like they rarely capitalized with points on their ensuing offensive drive. That led me to wonder: where did the Ravens rank among scores off takeaways in 2021? Were they really that inept at scoring off takeaways? Did it even affect their record? How did other NFL teams compare?
+
+## I wanted to find a few things:
+##  1) How frequently did the Ravens force turnovers? Was it as often as I thought?
+##  2) Overall, which teams capitalzied most efficiently off takeaways? Where did the Ravens rank?
+##  3) How did a team's ability/inability to capitalize off of takeaways affect its playoff chances? The Ravens?
+##  4) How accurately did takeaways predict a team's number of wins in 2021?
+##  5) Which teams had the highest turnover margin in 2021? 
+##  6) How accurately did turnover margin predict a team's number of wins in 2021?
+
+## This was an exploratory project. I jumped from one idea to the next and tried a handful of combinations to see which turnover-related statistic most accurately predicted a teams's win total for the 2021 NFL season. Originally I was focused on the Ravens, but I broadened by exploration to all 32 teams. I treated this as more of an exploration than a mission to prove something. I found that some turnover-related statisitcs were better at predicting a team's wins than others were, and while I answered the questions I posed I want dive into this data deeper. I admittedly wanted to work more with residuals, and I was curious about how I could incorportate EPA or winning probability into my searches. I'm not presenting this as a final product, but instead as a first step in my research.
 
 ```{r}
 library(tidyverse)
@@ -11,340 +23,56 @@ library(nflfastR)
 library(stringr)
 library(ggplot2)
 library(dplyr)
+library(waffle)
+library(ggalt)
+library(ggrepel)
+library(scales)
 ```
 
-## I want to see which NFL teams are the best at making their opponents pay for turnovers. In other words, I want to find out which NFL teams score the most frequently on their ensuing offensive series, whether that be a touchdown or a field goal, after recovering a fumble, grabbing an interception or forcing a turnover on downs. I'll start by finding out how many turnovers each team forced in 2021, then caluclute how many of those turnovers ended up being retunred for touchdowns before calculating how many weren't returned for scores. From there, I'll filter the data to include drives that began with an interception, fumble recovery or fourth down stop and calculate what percent of those drives ended in touchdowns for field goals for each team.
+## I could find these answers using the nflfastR dataframe.
 ```{r}
 nfl21 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2021.rds")
 ```
 
-## Turnover type 1 of 5: Interceptions 
-##I wanted to be be methodical here, so I wanted to make a dataframe for each type of turnover. 
+## First, I wanted to see how many takeaways each team had in 2021. I counted a takeaway as either a fumble recovery, interception or fourth-down stop.
 ```{r}
-ints21 <- nfl21 %>% 
-  filter(interception == 1) %>% 
-  mutate(type_of_turnover = case_when(
-    interception == 1 ~ 'interception'))
-```
-
-## To see which team led the league in 2021 in pick-sixes, I'll narrow down my dataframe.
-```{r}
-team_pick_sixes_21 <- ints21 %>% 
-filter(touchdown == 1) %>% 
+DOWNS_INTS_FUMBLES_21 <- nfl21 %>% 
+  filter(interception==1 | fumble_lost==1 | fourth_down_failed==1, drive_end_transition != 'TOUCHDOWN', drive_end_transition != 'FIELD_GOAL', drive_end_transition != 'PUNT') %>% 
   group_by(defteam) %>% 
-  summarize(picksixes=n()) %>% 
-  arrange(desc(picksixes))
+  summarize(takeaways=n()) %>% 
+  arrange(desc(takeaways))
 ```
 
-## To see which teams had the most interceptions in 2021, I'll create a new dataframe.
+## The previous dataframe had the takeaway team in the 'defteam' column, but I realized that punting teams who recover fumbles are in the 'posteam' column, so I had to make another dataframe to isolate punt recoveries.
 ```{r}
-team_ints_21 <- ints21 %>% 
+PUNT_RECOVERIES_21 <- nfl21 %>% 
+  filter(fumble_lost==1, play_type == 'punt') %>% 
+  rename(recovery_team=posteam) %>% 
+  rename(fumbling_team=defteam) %>% 
+  rename(defteam=recovery_team) %>% 
+  rename(posteam=fumbling_team) %>% 
   group_by(defteam) %>% 
-  summarize(ints=n()) %>% 
-  arrange(desc(ints))
+  summarize(takeaways=n()) %>% 
+  arrange(desc(takeaways))
 ```
 
-## Now I have enough information to create a dataframe displaying each team's interceptions, pick-sixes and non-pick-six interceptions. I'll re-arrange the column names and call it 'teampicksixes21'.
+## Now I can combine the previous two dataframes into one dataframe that shows each team's takeaways off of interceptions, fumble recoveries and fourth down stops.
 ```{r}
-full_join(team_pick_sixes_21, team_ints_21, by = "defteam") %>% 
-mutate(nopicksix = ints-picksixes) -> team_pick_sixes_21
+full_join(DOWNS_INTS_FUMBLES_21, PUNT_RECOVERIES_21, by = "defteam") -> takeaways_2021
 
-col_order <- c('defteam', 'ints', 'picksixes', 'nopicksix')
+takeaways_2021[is.na(takeaways_2021)] <- 0
 
-team_pick_sixes_21 <- team_pick_sixes_21[,col_order]
-```
-
-## Turnover type 2 of 5: Fourth down stops
-## Not counting per team just yet, instead I want to see how many there were throughout the league in 2021.
-```{r}
-fourth_down_stuffs_21 <- nfl21 %>% 
-  filter(fourth_down_failed == 1) %>% 
-  filter(drive_end_transition == 'DOWNS')
-```
-
-## Since any return TDs on fourth-down stops would be accounted for by either pick-sixes or scoop-and-scores, I can just create a dataframe that shows which teams recorded the most fourth-down stops this season.
-```{r}
-team_fourth_down_stuffs_21 <- nfl21 %>% 
-  filter(fourth_down_failed == 1) %>% 
-  filter(drive_end_transition == 'DOWNS')%>% 
-  group_by(defteam) %>% 
-  summarize(fourth_down_stuffs=n()) %>% 
-  arrange(desc(fourth_down_stuffs))
-```
-
-## Turnover type 3 of 5: Scrimmage Recoveries.
-##This is where it gets complicated. I divided fumbles into three categories: scrimmage fumbles, kick return fumbles and punt return fumbles. Scrimmage fumbles are fumbles that occur when the play type was either a run or a pass, so I'll start there, again first by just seeing how many there were in the NFL in 2021.
-```{r}
-scrimmage_recoveries_21 <- nfl21 %>% 
-  filter(play_type %in% c('run', 'pass'), fumble_lost == 1) %>% 
-  filter(drive_end_transition == 'FUMBLE') %>% 
-  mutate(type_of_turnover = case_when(
-    fumble_lost == 1 ~ 'scrimmage fumble'
-  ))
-```
-
-## Like I did for the pick-sixes, I want to find out how many of these scrimmage recoveries were returned for touchdowns and calculate this for each team.
-```{r}
-team_scrimmage_scoop_and_scores_21 <- scrimmage_recoveries_21 %>% 
-  filter(touchdown == 1) %>% 
-  group_by(defteam) %>% 
-  summarize(scoopandscores=n()) %>% 
-  arrange(desc(scoopandscores))
-```
-
-## Now, I'll do scrimmage recoveries that weren't returned for touchdowns for each team.
-```{r}
-team_scrimmage_recoveries_21 <- scrimmage_recoveries_21 %>% 
-  group_by(defteam) %>% 
-  summarize(scrimmagerecoveries=n()) %>% 
-  arrange(desc(scrimmagerecoveries))
-```
-
-## Turnover type 4 of 5: Punt Fumble Recoveries
-## How many punts were fumbled and recovered by the punting team in 2021?
-```{r}
-punt_recovereies_21 <- nfl21 %>% 
-  filter(play_type == 'punt', fumble_lost == 1)
-```
-
-## Onto punt scoop and scores. These are pretty rare, so I'll first need to see if any even occurred in 2021.
-```{r}
-punt_scoop_and_scores <- nfl21 %>% 
-  filter(play_type == 'punt', fumble_lost == 1, touchdown == 1)
-```
-
-## There was one by the Bears, so punt scoop and scores deserve their own dataframe. Unlike in the other dataframes, where fumble recoveries are credited to the 'defteam,' fumble recoveries on punts are credited to the 'posteam' since they had the ball when the play started. For consistency, I'll rename the posteam column to defteam, since this is the team that recovered the fumble.
-```{r}
-team_punt_scoop_and_scores_21 <- nfl21 %>% 
-  filter(play_type == 'punt', fumble_lost == 1, touchdown == 1) %>% 
-  rename(recoveryteam = posteam) %>% 
-  rename(fumblingteam = defteam) %>%
-  rename(defteam = recoveryteam) %>% 
-  rename(posteam = fumblingteam) %>% 
-  group_by(defteam) %>% 
-  summarize(puntscoopandscores=n()) %>% 
-  arrange(desc(puntscoopandscores))
-```
-
-## Now I can count each team's punt fumble recoveries that weren't returned for touchdowns. Again, I need to rename the posteam column to defteam to remain consistent.
-```{r}
-team_punt_recoveries_21 <- nfl21 %>% 
-  filter(play_type == 'punt', fumble_lost == 1) %>% 
-  rename(recoveryteam = posteam) %>% 
-  rename(fumblingteam = defteam) %>%
-  rename(defteam = recoveryteam) %>% 
-  rename(posteam = fumblingteam) %>% 
-  group_by(defteam) %>% 
-  summarize(puntrecoveries=n()) %>% 
-  arrange(desc(puntrecoveries))
-```
-
-## Turnover type 5 of 5: Kickoff Fumble Recoveries
-## Assuming these will be rare especially given how many touchbacks there are.
-```{r}
-kickoff_recoveries_21 <- nfl21 %>% 
-  filter(play_type == 'kickoff', fumble_lost == 1)
-```
-
-## Finally, onto team kickoff recoveries. In 2021, there were no scoop and scores on kickoffs, so I can jump straight to counting the number of kickoff fumble recoveries for each squad.
-```{r}
-team_kickoff_recoveries_21 <- nfl21 %>% 
-  filter(play_type == 'kickoff', fumble_lost == 1) %>% 
-  group_by(defteam) %>% 
-  summarize(kickoff_recoveries=n()) %>% 
-  arrange(desc(kickoff_recoveries))
-```
-
-## With scrimmage, punt and kickoff fumbles done, now I want to combine all scoop and scores into a single dataframe. I'll start with scrimmage scoop-and-scores. I want to combine the column containing the number of each team's scrimmage scoop and scores into a dataframe with a column containing each team's scrimmage fumble recoveries and join them by defensive team, or 'defteam.' I'll rename it to 'teamscrimmagescoopandscores21' for clarity. I also want to replace NA data with zeroes.
-```{r}
-full_join(team_scrimmage_scoop_and_scores_21, team_scrimmage_recoveries_21, by = "defteam") %>% 
-  mutate(noscrimmagescoopandscore = scrimmagerecoveries - scoopandscores) -> team_no_scoop_and_scores_21
-
-fum_col_order <- c('defteam', 'scrimmagerecoveries', 'scoopandscores', 'noscrimmagescoopandscore')
-
-team_scrimmage_scoop_and_scores_21 <- team_no_scoop_and_scores_21[,fum_col_order]
-
-team_scrimmage_scoop_and_scores_21[is.na(team_scrimmage_scoop_and_scores_21)] <- 0
-```
-
-## Now, I have a dataframe that shows the team, the number of scrimmage recoveries they had, the number that were returned for touchdowns and the number that weren't returned for touchdowns. Next I'll create a similar dataframe, but this one will be for punt scoop-and-scores.
-```{r}
-full_join(team_punt_scoop_and_scores_21, team_punt_recoveries_21, by = "defteam") -> team_punt_scoop_and_scores_21
- 
-  team_punt_scoop_and_scores_21 <- team_punt_scoop_and_scores_21 %>%  
-   mutate(nopuntscoopandscore = puntrecoveries - puntscoopandscores)
-
-team_punt_scoop_and_scores_21[is.na(team_punt_scoop_and_scores_21)] <- 0
-```
-
-## With dataframes measuring each team's interceptions, pick-sixes, fumble recoveries, scoop and scores and fourth-down stops, I can combine these into a single dataframe with full_join. First, I want to combine all types of return scores into a single dataframe.
-```{r}
-full_join(team_pick_sixes_21, team_punt_scoop_and_scores_21, by = 'defteam') -> returns_part_one_21
-
-returns_part_one_21[is.na(returns_part_one_21)] <- 0
-
-full_join(returns_part_one_21, team_scrimmage_scoop_and_scores_21, by = 'defteam') %>% 
-  mutate(returnscores = picksixes + puntscoopandscores + scoopandscores) -> return_scores_21
-
-return_scores_21_condensed <- return_scores_21 %>% 
-  select(defteam, returnscores) %>%
+takeaways_2021 <- takeaways_2021 %>% 
+  mutate(takeaways = takeaways.x + takeaways.y) %>% 
+  select(defteam, takeaways) %>% 
   rename(team=defteam) %>% 
-  arrange(desc(returnscores))
+  arrange(desc(takeaways))
 ```
 
-## Now I want to put it all together. I want to have a dataframe displaying each team's takeaways, their takeaway return touchdowns, their takeaway returns that don't end in touchdowns and the percentage of their takeaways that are returned for touchdowns.
+## To enhance the dataframe, I mutated two columns: one that showed each team's 2021 win total, and another that indicated whether each team made or missed the playoffs.
 ```{r}
-full_join(team_ints_21, team_fourth_down_stuffs_21, by = 'defteam') -> chart_one
-
-full_join(chart_one, team_scrimmage_recoveries_21, by = 'defteam') -> chart_two
-
-full_join(chart_two, team_kickoff_recoveries_21, by = 'defteam') -> chart_three
-
-full_join(chart_three, team_punt_recoveries_21, by = 'defteam') -> chart_five
-
-chart_five <- chart_five %>% 
-  rename(team=defteam)
-
-full_join(chart_five, return_scores_21_condensed, by = 'team') -> chart_six
-
-chart_seven <- chart_six 
-  
-chart_seven[is.na(chart_seven)] <- 0
-  
-chart_seven <- chart_seven %>% 
-   mutate(takeaways = ints + fourth_down_stuffs + scrimmagerecoveries + kickoff_recoveries + puntrecoveries)
-```
-
-## To put things together even more, I'll create a dataframe that renames returnscores to takeaway_return_tds and mutate a column that measures non-touchdown returns off takeaways by subtracting takeaway return touchdowns from total takeaways. I'll also find out what percentage of takeaways are returned for scores by mutating a column that divides takeaway return touchdowns by total takeaways and multiplies it by 100. 
-```{r}
-team_takeaways_and_return_scores_21 <- chart_seven %>% 
-  select(team, returnscores, takeaways) %>% 
-  rename(takeaway_return_tds=returnscores) %>% 
-  mutate(no_return_td_takeaways = takeaways - takeaway_return_tds) %>% 
-  mutate(takeaway_return_td_pct = (takeaway_return_tds /takeaways)*100) %>% 
-  arrange(desc(takeaway_return_td_pct))
-```
-
-## I want to display the distribution of takeaways in 2021. I'll categorize it based on interceptions, downs, scrimmage fumble recoveries, punt fumble recoveries and kickoff fumble recoveries. Overall, I want to display all takeaways during the 2021 NFL season and break it into five sections, so I'll use a waffle chart.
-```{r}
-turnovers <- c('Interceptions'=463, 'Downs'=352, 'Scrimmage Recoveries'=245, 'Punt Recoveries'=23, 'Kickoff Recoveries'=7)
-```
-
-## My initial chart was hard to see since there were so many squares, so I cut the number of squares down by half to better display the data.
-```{r}
-waffle(turnovers/2, 
-        rows = 15, 
-        title="NFL Takeaways 2021", 
-        xlab="1 square = 2 takeaways", 
-        colors = c("black", "red", "green", "blue", "orange"))
-        
-```
-## Now comes the net big step. I want to see how many of these non-touchdown-return takeaways were turned into points on the team's subsequent offensive series. I'm also curious as to how many field goals each team kicked compared to how many touchdowns they scored off turnovers.   
-```{r}
-nfl_21_scores <- nfl21 %>% 
-  mutate(score = case_when(
-    touchdown == 1 ~ "touchdown",
-    field_goal_result == "made" ~ "field goal",
-    touchdown != 1 ~ "no score",
-    field_goal_result != "made" ~ "no score"
-  ))
-```
-
-## At this point, I can group by team. I want to combine each team's touchdowns and field goals scored off of takeaways. I should have 32 rows, one for each team.
-```{r}
-team_scores_off_tovs_21 <- nfl_21_scores %>% 
-  rename(team=posteam) %>%
-  filter(drive_start_transition %in% c('DOWNS', 'FUMBLE', 'INTERCEPTION', 'MUFFED_PUNT')) %>% 
-  filter(score %in% c('touchdown', 'field goal')) %>% 
-  group_by(team) %>% 
-  summarize(scoresofftovs=n()) %>% 
-  arrange(desc(scoresofftovs))
-```
-
-## I want to narrow that dataframe down a bit. I want to focus on touchdowns, so I'll filter just by touchdowns and create a new column conveying the type of score, which in this case is a touchdown.
-```{r}
-team_touchdowns_off_takeaways_21 <- nfl_21_scores %>% 
-  rename(team=posteam) %>% 
-  filter(drive_start_transition %in% c('DOWNS', 'FUMBLE', 'INTERCEPTION', 'MUFFED_PUNT')) %>%
-  filter(score == 'touchdown') %>% 
-  group_by(team) %>% 
-  summarize(scores_tds_off_takeaways = n()) %>% 
-  arrange(desc(scores_tds_off_takeaways)) %>% 
-    mutate(score_type=case_when(
-    scores_tds_off_takeaways >= '1' ~ 'touchdown')
-  ) %>% 
-  rename(count=scores_tds_off_takeaways)
-```
-
-## Next, I want to do the same thing, but for field goals.
-```{r}
-team_field_goals_off_takeaways_21 <- nfl_21_scores %>% 
-  rename(team=posteam) %>% 
-  filter(drive_start_transition %in% c('DOWNS', 'FUMBLE', 'INTERCEPTION', 'MUFFED_PUNT')) %>%
-  filter(score == 'field goal') %>% 
-  group_by(team) %>% 
-  summarize(scores_fgs_off_takeaways = n()) %>% 
-  arrange(desc(scores_fgs_off_takeaways)) %>% 
-    mutate(score_type=case_when(
-    scores_fgs_off_takeaways >= '1' ~ 'field goal')
-  ) %>% 
-  rename(count=scores_fgs_off_takeaways)
-```
-
-## Time to put this in a graph. I'll use stacked bar chart to display each team's touchdown and field goals on their ensuing offensive drive after a takeaway. This bar chart shows each team's scores -- broken into field goals and touchdowns -- on their ensuing offensive drive following a takeaway.
-```{r}
-full_join(team_touchdowns_off_takeaways_21, team_field_goals_off_takeaways_21, by = 'team') -> team_tds_and_fgs_off_takeaways_21
-
-long_team_tds_and_fgs_off_takeaways_21 <- rbind(team_touchdowns_off_takeaways_21, team_field_goals_off_takeaways_21) %>% 
-  group_by(team) %>% 
-  arrange(team)
-
-ggplot() + 
-  geom_bar(data=long_team_tds_and_fgs_off_takeaways_21, aes(x=reorder(team, count), weight=count, fill=score_type)) + 
-  coord_flip()
-```
-
-```{r}
-full_join(return_scores_21_condensed, team_scores_off_tovs_21, by = 'team') -> chart_eight
-```
-
-```{r}
-full_join(team_takeaways_and_return_scores_21, chart_eight, by = 'team') -> chart_nine
-  
-scores_off_takeaways_percent_21 <- chart_nine %>% 
-  select(team, takeaways, returnscores, scoresofftovs, takeaway_return_td_pct) %>% 
-  mutate(totalscoresofftovs = returnscores + scoresofftovs) %>% 
-  mutate(total_scores_off_takeaways_pct = (totalscoresofftovs / takeaways)*100)
-
-scores_off_takeaways_percent_21_condensed <- scores_off_takeaways_percent_21 %>% 
-  select(team, total_scores_off_takeaways_pct) %>% 
-  arrange(desc(total_scores_off_takeaways_pct))
-
-```
-
-```{r}
-library(scales)
-```
-
-```{r}
-ggplot() + 
-  geom_bar(
-    data=scores_off_takeaways_percent_21_condensed, 
-    aes(x=reorder(team, `total_scores_off_takeaways_pct`),
-        weight=`total_scores_off_takeaways_pct`)) + 
-  scale_y_continuous(labels=comma) + 
-  labs(
-    title="NFL Teams' Points off Turnover % 2021", 
-    x="Team", 
-    y="Points off Turnover Percentage") + 
-  theme_minimal() + 
-  coord_flip()
-```
-
-```{r}
-bubble_df <- chart_nine %>% 
-  select(team, takeaways, scoresofftovs) %>% 
-  mutate(wins = case_when(
+takeaways_2021 <- takeaways_2021 %>%  
+ mutate(wins = case_when(
     team %in% c('GB', 'TB') ~ 13,
     team %in% c('DAL', 'KC', 'LA', 'TEN') ~ 12,
     team %in% c('ARI', 'BUF') ~ 11,
@@ -356,23 +84,526 @@ bubble_df <- chart_nine %>%
     team == 'CAR' ~ 5,
     team %in% c('HOU', 'NYG', 'NYJ') ~ 4,
     team %in% c('DET', 'JAX') ~ 3
-  )) %>% 
-  rename(scores_off_takeaways = scoresofftovs) %>% 
-  mutate(scores_off_takeaways_percent = (scores_off_takeaways/takeaways)*100) %>% 
-  arrange(desc(scores_off_takeaways_percent))
+ ))
+    
+takeaways_2021 <- takeaways_2021 %>% 
+    mutate(playoffs = case_when(team %in% c('TEN', 'KC', 'BUF', 'CIN', 'LV', 'NE', 'PIT', 'GB', 'TB', 'LA', 'DAL', 'SF', 'ARI', 'PHI') ~ "made"))
+  
+takeaways_2021[is.na(takeaways_2021)] <- 'missed'
+```
+
+## I also created a datafram showing all playoff teams in 2021.
+```{r}
+playoffteams21 <- takeaways_2021 %>% 
+  filter(playoffs == 'made')
+```
+
+## With the data sorted out, I created a bar chart showing each team's takeaways in 2021.
+```{r}
+ggplot() + 
+  geom_bar(
+    data=takeaways_2021, 
+    aes(x=reorder(team, takeaways),
+        weight=takeaways)) +
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, takeaways),
+        weight=takeaways),
+    color='red') +
+  labs(
+    title="NFL Teams' Takeaways 2021",
+    subtitle="Ten of the league's top 11 takeaway teams made the playoffs in 2021",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Takeaways (Incl. Postseason)") + 
+  theme_minimal() + 
+  coord_flip()
+
+ggplot()+
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, takeaways),
+        weight=takeaways),
+    color="grey") +
+  labs(
+    title="NFL Playoff Teams' Takeaways 2021",
+    subtitle="Tampa Bay's swashbuckling defense couldn't bring another title aboard in 2021",
+    caption="Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Takeaways (Incl. Postseason)") + 
+  theme_minimal()
+```
+
+## So, the Buccaneers led the league in turnovers forced in 2021, while the Bills and Rams followed closely behind. All three reached at least the Divisional round. Meanwhile, the Raiders, Jets and Jaguars finisihed in the bottom three, with only Las Vegas slipping into the playoffs, where they fell in the Wild Card round. Notice that 16 teams forced more turnovers than the Raiders -- seven of them in the AFC -- yet missed the playoffs. The Chargers forced almost twice as many turnovers, but yet they were on the wrong end of that Week 18 instant classic in the Sin City that ended their season. A team like Dallas or Green Bay, both of whom were among the top five in total takeaways, suffered the same fate in their first playoff game as the Raiders did: a loss.
+
+## To answer my first question, the Ravens forced 22 turnovers (fumble recoveries, interceptions and turnovers on downs) in 2021, which ranked 29th out of 32 teams. Forcing more turnovers may have bettered their fortunes, but I can move past last season at this point. What I became more interested in was how well teams capitalized on their takeaways -- whether that be return touchdowns or scores on their ensuing offensive possesion. Essentially, I wanted to find out if scoring off takeaways was a better indicator of a team's 2021 wins than takeaways by themselves. I considered a score off a turnover to be any of the following:
+## - Interception returned for a touchdown
+## - Fumble (kickoff, punt or scrimmage) returned for a touchdown
+## - Touchdown on ensuing offensive drive following a takeaway
+## - Field goal made on ensuing offensive drive following a takeaway
+
+## To do this, I needed to first find how many takeaway return scores each team had in 2021. I scanned the data and found one punt fumble return touchdown, so I created a separate dataframe for that because the 'posteam' was initially the team that scored, and I wanted them to be the 'defteam,' which the scoring teams were under in the other takeaway return score scenarios.
+
+## To begin searching for which teams immediately capitalized the most on turnovers, I want to first calculate how many interception and fumble return scores each team had in 2021.
+```{r}
+chi_pit_21 <-nfl21 %>% 
+  filter(play_type== 'punt', return_touchdown==1, fumble_lost == 1 | interception == 1) %>% 
+  rename(recovery_team=posteam) %>% 
+  rename(fumbling_team=defteam) %>% 
+  rename(defteam=recovery_team) %>% 
+  rename(posteam=fumbling_team)
+
+return_scores_21 <- nfl21 %>% 
+  filter(game_id != "2021_09_CHI_PIT", return_touchdown == 1, fumble_lost == 1 | interception == 1)
+
+return_scores_21 <- rbind(return_scores_21, chi_pit_21) %>% 
+  rename(team=defteam) %>% 
+  group_by(team) %>% 
+  summarize(return_scores=n())
+
+takeaways_and_return_tds21 <- full_join(return_scores_21, takeaways_2021)
+  
+takeaways_and_return_tds21[is.na(takeaways_and_return_tds21)] <- 0
+```
+
+## Now I know how many return touchdowns off takeaways each team had in 2021. Next, I want to see how many teams converted a takeaway into points (either a touchdown or a field goal) on their ensuing offensive drive. I had to filter the drive start transition to be either a foruth down failure, a fumble (this counted for scrimmage fumbles and kickoff fumbles) an interception or a muffed punt. To zero in on the plays that resulted in points, I filtered to get rows where the 'touchdown' column equaled 1, or the 'field_goal_result' column equaled 'made.'
+```{r}
+off_scores_off_takeaways21 <- nfl21 %>% 
+  filter(drive_start_transition %in% c('DOWNS', 'FUMBLE', 'INTERCEPTION', 'MUFFED_PUNT'), touchdown == 1 | field_goal_result == 'made') %>%
+  rename(team=posteam) %>% 
+  group_by(team) %>% 
+  summarize(off_scores_off_takeaways=n()) %>% 
+  arrange(desc(off_scores_off_takeaways))
+
+takeaways_and_scores_2021 <- full_join(off_scores_off_takeaways21, takeaways_and_return_tds21, by = 'team') %>% 
+  mutate(scores_off_takeaways = off_scores_off_takeaways + return_scores) %>% 
+  mutate(scores_off_takeaways_pct = (scores_off_takeaways/takeaways)*100) %>% 
+  arrange(desc(scores_off_takeaways_pct))
+  
+col_order <- c('team', 'takeaways', 'scores_off_takeaways', 'scores_off_takeaways_pct', 'return_scores', 'off_scores_off_takeaways')
+
+playoffteams21 <- takeaways_and_scores_2021 %>% 
+  filter(playoffs == 'made')
+```
+
+## Showing NFL teams' scores off takeaways percentage 2021. I made two dataframes -- the first showing scores (touchdowns, field goals or return scores) off takeaways for all teams, the second showing scores off takeaways for just playoff teams.
+```{r}
+ggplot() + 
+  geom_bar(
+    data=takeaways_and_scores_2021, 
+    aes(x=reorder(team, scores_off_takeaways_pct),
+        weight=scores_off_takeaways_pct)) +
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, scores_off_takeaways_pct),
+        weight=scores_off_takeaways_pct),
+    color='red') +
+  labs(
+    title="Scores off Takeaways Pct. 2021",
+    subtitle="Vegas didn't force a ton of turnovers, but they frequently made opponents pay",
+    caption="Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Scores off Takeaways Pct") + 
+  theme_minimal() +
+  coord_flip()
+
+ggplot()+
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, scores_off_takeaways_pct),
+        weight=scores_off_takeaways_pct),
+    color="grey") +
+  labs(
+    title="Playoff Teams' Scores off Takeaways 2021",
+    subtitle="The top six teams in scores off turnovers percentage lost their first playoff game in 2021",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Scores off Takeaways Pct") + 
+  theme_minimal()
+```
+## So, to answer my second question, the Titans were the best at making their oppoenets pay for turning the ball over, as the AFC's 1-seed scored off of a takeaway over 70% of the time in 2021. The Cowboys and Raiders were also pretty proficient at captializing on other teams' mistakes.
+
+
+ased on the graph showed all 32 teams, if you could make your opponents pay for turning the  ball over -- regardless of how many or how few turnovers you forced -- you had a pretty good shot at the postseason. With the exception of San Francisco, all playoff teams in 2021 finished in the top half in the league in scores off turnover percentage, and all playoff teams except for San Franciso and the Los Angeles Rams capitalized on at least 50% of their takeaways. But what really surprised me was the second plot that isolated the playoff teams. The top six teams -- and eight of the top ten overall -- all lost their first playoff game. Meanwhile, the two playoff teams with the lowest scores off turnover percentage -- San Francisco and the Los Angeles Rams -- met in the NFC Championship. Even the Bengals, who ranked eleventh, vanquished two of the top three teams in the category and reached the Super Bowl. So, these two charts suggested that while scoring off turnovers frequently may propel a team to the playoffs, it does not guarantee a deep run -- even a win, for that matter.
+
+## It seemed clear that the previous bar chart was pretty good at indicating whether a team made or missed the playoffs based on its ability to capitalize on takeaways, but I wanted to see how well scores off takeaways could predict straight-up wins, not playoff fate. 
+```{r}
+fit <- lm(wins ~ scores_off_takeaways_pct, data = takeaways_and_scores_2021)
+summary(fit)
+```
+
+## Good p-value, so I knew the relationship between these variables isn't random. An R-squared value of about 37% told me that this is a decent model, so I took this take this a step further.
+```{r}
+takeaways_and_scores_2021 <- takeaways_and_scores_2021 %>% 
+  mutate(predicted_wins=predict(fit), residual_wins=residuals(fit))
+
+playoffteams21 <- takeaways_and_scores_2021 %>% 
+  filter(playoffs == 'made')
 
 ggplot() + 
-  geom_point(data=bubble_df, aes(x=scores_off_takeaways_percent, y=wins)) +
-  geom_smooth(data=bubble_df, aes(x=scores_off_takeaways_percent, y=wins), method="lm")
+  geom_point(data=takeaways_and_scores_2021, aes(x=scores_off_takeaways_pct, y=wins)) +
+  geom_smooth(data=takeaways_and_scores_2021, aes(x=scores_off_takeaways_pct, y=wins), method="lm") +
+   geom_point(
+    data=playoffteams21, 
+    aes(x=scores_off_takeaways_pct, y=wins), 
+    color="red") +
+  labs(
+    title="Scores off Takeaways Pct. and Wins 2021",
+    subtitle="Dallas won 12 games, just as a team that scores almost 70% of the time off turnovers should",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski") +
+   geom_text_repel(
+    data=takeaways_and_scores_2021, 
+    aes(x=scores_off_takeaways_pct, y=wins, label=team))
 ```
+## This seems like an okay-ish scatterplot. The Titans were the 1-seed in the AFC, while the Giants finished last in the NFC East. Teams like the Lions and Jaguars really underachieved given how frequently they captialized off turnovers, while team like Green Bay, Tampa Bay and the Los Angeles Rams overacheived. Overall, a good number of teams strayed well beyond (either above or below) what was expected from them in terms of wins based on their scores off takeaways percentage. Generally, teams that overacheived made the playoffs, while teams teams that underachieved missed them. It was interesting to see the split in playoff fate among teams who overacheived and underachieved, but this was expected -- the more wins you have, the better your chances at the playoffs are. So I wanted to see if a different turnover-related stat could better indicate how many wins a team had in 2021.
+
+## To answer my third question, a team's ability to capitalize off takeaways was a so-so estimate of a team's win total for the 2021 season.
+
+## That led me to question how much scores off turnovers play a role and how much simply forcing turnovers influences a team's win total.
+```{r}
+takeawaysfit <- lm(wins ~ takeaways, data = takeaways_and_scores_2021)
+summary(takeawaysfit)
+```
+
+## Good p-value again, but this time the adjusted R-squared value jumps by about 20. I swapped out scores off takeaways for takeaways in the next plot. Asnwering question 4: How accurately did takeaways predict a team's number of wins in 2021?
+```{r}
+ggplot() + 
+  geom_point(data=takeaways_and_scores_2021, aes(x=takeaways, y=wins)) +
+  geom_smooth(data=takeaways_and_scores_2021, aes(x=takeaways, y=wins), method="lm") +
+  geom_point(data=playoffteams21, aes(x=takeaways, y=wins), color="red") +
+  labs(
+    title="Takeaways and Wins 2021",
+    subtitle="Vegas should have been out of the playoff hunt by Thanksgiving",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski") +
+   geom_text_repel(
+    data=takeaways_and_scores_2021, 
+    aes(x=takeaways, y=wins, label=team))
+```
+## So, takeaways are a much better indicator than scores off turnover percentage of how many wins a team had in 2021. And based on the plot, more takeaways leads to more wins, which increases a team's likelihood of playing in mid-January. Additionally, overchieveing was better than underacheiving for a team's playoff hopes, as only the Bengals, Patriots and Bills cracked the postseason depsite having fewer wins than their takeaway totals expected them to have. But the Raiders stick out. Given how many turnovers they forced, they should have been out of the playoff hunt by Thanksgiving. But they somehow dug up ten wins and ultimately found themselves less than ten yards away from forcing overtime in their playoff game. How rare is it for a team to overachieve this much in terms of wins given how few turnovers they forced? I saved this for later to unpack (I want to continue looking into this in the next project), because next I wanted to explore how a team's turnover margin affected its 2021 win total. But to do that, I had to find each team's giveaways, so I figured I'd explore that too (how well a team takes care of the ball can predict its win total) along the way.
+
+```{r}
+DOWNS_INTS_FUMBLES_GIVEAWAYS_21 <- nfl21 %>% 
+  filter(interception==1 | fumble_lost==1 | fourth_down_failed==1, drive_end_transition != 'TOUCHDOWN', drive_end_transition != 'FIELD_GOAL', drive_end_transition != 'PUNT') %>% 
+  group_by(posteam) %>% 
+  summarize(giveaways=n()) %>% 
+  arrange(desc(giveaways))
+
+PUNT_FUMBLES_21 <- nfl21 %>% 
+  filter(fumble_lost==1, play_type == 'punt') %>% 
+  rename(recovery_team=posteam) %>% 
+  rename(fumbling_team=defteam) %>% 
+  rename(defteam=recovery_team) %>% 
+  rename(posteam=fumbling_team) %>% 
+  group_by(posteam) %>% 
+  summarize(giveaways=n()) %>% 
+  arrange(desc(giveaways))
+
+full_join(DOWNS_INTS_FUMBLES_GIVEAWAYS_21, PUNT_FUMBLES_21, by = "posteam") -> giveaways_2021
+
+giveaways_2021[is.na(giveaways_2021)] <- 0
+
+giveaways_2021 <- giveaways_2021 %>% 
+  mutate(giveaways = giveaways.x + giveaways.y) %>% 
+  select(posteam, giveaways) %>% 
+  rename(team=posteam) %>% 
+  arrange(desc(giveaways))
+
+giveaways_2021 <- giveaways_2021 %>% 
+   mutate(wins = case_when(
+    team %in% c('GB', 'TB') ~ 13,
+    team %in% c('DAL', 'KC', 'LA', 'TEN') ~ 12,
+    team %in% c('ARI', 'BUF') ~ 11,
+    team %in% c('CIN', 'LV', 'NE', 'SF') ~ 10,
+    team %in% c('PIT', 'IND', 'LAC', 'MIA', 'NO', 'PHI') ~ 9,
+    team %in% c('BAL', 'CLE', 'MIN') ~ 8,
+    team %in% c('ATL', 'DEN', 'SEA', 'WAS') ~ 7,
+    team == 'CHI' ~ 6,
+    team == 'CAR' ~ 5,
+    team %in% c('HOU', 'NYG', 'NYJ') ~ 4,
+    team %in% c('DET', 'JAX') ~ 3
+ )) %>% 
+  arrange(desc(giveaways))
+
+inner_join(giveaways_2021, playoffteams21, by = "team") -> playoffteams21
+
+playoffteams21 <- playoffteams21 %>% 
+  select(-wins.y)
+
+playoffteams21 <- playoffteams21 %>% 
+  mutate(tov_margin = takeaways - giveaways)
+
+playoffteams21 %>% 
+   mutate(wins = case_when(
+    team %in% c('GB', 'TB') ~ 13,
+    team %in% c('DAL', 'KC', 'LA', 'TEN') ~ 12,
+    team %in% c('ARI', 'BUF') ~ 11,
+    team %in% c('CIN', 'LV', 'NE', 'SF') ~ 10,
+    team %in% c('PIT', 'PHI') ~ 9,
+ ))
+
+```
+
+## Created a bar chart displaying each team's giveaways in 2021:
+```{r}
+ggplot() + 
+  geom_bar(
+    data=giveaways_2021, 
+    aes(x=reorder(team, giveaways),
+        weight=giveaways)) +
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, giveaways),
+        weight=giveaways),
+    color="red") +
+  labs(
+    title="NFL Teams' Giveaways 2021",
+    subtitle="Carolina was the purrfect matchup for a hungry defense",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Giveaways (Incl. Playoffs)") + 
+  theme_minimal() + 
+  coord_flip()
+
+ggplot()+
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, giveaways),
+        weight=giveaways),
+    color="grey") +
+  labs(
+    title="NFL Playoff Teams' Giveaways 2021",
+    subtitle="The Rams were generous and still ended up with the top prize",
+    caption="Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Giveaways (Incl. Playoffs)") + 
+  theme_minimal()
+```
+## But how much stock could I take into this? The Rams turned it over pretty often, but they hoisted the Lombardi. Meanwhile, five of the six most careful teams in the league didn't even make the playoffs, and the one team that did lost their first playoff game. I created a linear model to test this out, comparing the relationship between giveaways and wins.
+```{r}
+giveawaysfit <- lm(wins ~ giveaways, data = giveaways_2021)
+summary(giveawaysfit)
+```
+
+## This was my least accurrate predictor of a team's wins in 2021; just a 22% R-squared value. So, there's not much of a relationship between giveaways and wins. I created a scatterplot and didn't expect much:
 
 ```{r}
 ggplot() + 
-  geom_point(
-    data=bubble_df, 
-    aes(x=scores_off_takeaways, y=takeaways, size=wins),
-    alpha = .3) + 
-  scale_size(range = c(3, 8), name="Wins")
+  geom_point(data=giveaways_2021, aes(x=giveaways, y=wins)) +
+  geom_smooth(data=giveaways_2021, aes(x=giveaways, y=wins), method="lm") +
+   geom_point(
+    data=playoffteams21, 
+    aes(x=giveaways, y=wins.x), 
+    color="red") +
+   geom_text_repel(
+    data=giveaways_2021, 
+    aes(x=giveaways, y=wins, label=team)) +
+ labs(
+    title="Giveaways and Wins 2021",
+    subtitle="Teams that won less than expected given their turnovers had no shot at the 2021 playoffs",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski",
+    x="Giveaways", 
+    y="Wins") + 
+  theme_minimal()
+```
+## This doesn't show much of a relationship. Given this, it looks like many teams made the playoffs even when they shouldn't have based on their giveaways. With nine wins being just enough to squeak into last season's playoffs, teams like the Chiefs, Titans, 49ers and Rams should have probably missed out, while a team like Seattle probably should've hosted a playoff game. The Rams taught me that you can still be well-off even if you turn the ball over a lot, while the Seahawks taught me that taking care of the ball doesn't guarantee wins.
+
+
+## To answer my third question (but also to visualize each team's turnover margin a bit more clearly) that asked what each team's turnover margin was, I created a dumbbell chart that showed this and highlighted playoff teams in red. The red dumbbell indicates giveaways, while the green dumbbell indicates takeaways.
+```{r}
+full_join(takeaways_and_scores_2021, giveaways_2021, by = 'team') -> turnovers_21
+
+turnovers_21[is.na(turnovers_21)] <- 0
+
+turnovers_21 <- turnovers_21 %>% 
+  mutate(tov_margin = takeaways - giveaways)
+
+
+ggplot() + 
+  geom_dumbbell(
+    data=turnovers_21, 
+    aes(y=reorder(team, giveaways), x=giveaways, xend=takeaways),
+    size = 1.25,
+      colour = "black",
+    colour_x = "red",
+    colour_xend = "green") +
+  geom_dumbbell(
+    data=playoffteams21, 
+    aes(y=reorder(team, giveaways), x=giveaways, xend=takeaways),
+    size = 1.25,
+      colour = "red",
+    colour_x = "red",
+    colour_xend = "green") +
+  theme_minimal() +
+ labs(
+    title="NFL Turnover Margins 2021",
+    subtitle="How did Vegas make the playoffs?",
+    caption="Source: nflfastR | By Tanner Malinowski",
+    x="Turnover Margin (Incl. Playoffs)", 
+    y="Team") + 
+  theme_minimal()
+
+ggplot() + 
+  geom_dumbbell(
+    data=playoffteams21, 
+    aes(y=reorder(team, giveaways), x=giveaways, xend=takeaways),
+    size = 1.25,
+      colour = "black",
+    colour_x = "red",
+    colour_xend = "green") +
+  theme_minimal() +
+ labs(
+    title="Playoff Team Turnover Margins 2021",
+    subtitle="How did Vegas make the playoffs?",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski",
+    x="Turnover Margin (Incl. Playoffs)", 
+    y="Team") + 
+  theme_minimal()
 ```
 
+## I realized that the bar cart is good for showing the gap between a team's giveaways and takeaways, but I also realized that a bar chart would be better at distinguishing a positive turnover margin from a negative one.
+```{r}
+ggplot() + 
+  geom_bar(
+    data=turnovers_21, 
+    aes(x=reorder(team, tov_margin),
+        weight=tov_margin)) +
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, tov_margin),
+        weight=tov_margin),
+    color="red") +
+  labs(
+    title="NFL Teams' Turnover Margin 2021",
+    subtitle="Positive turnover margins generally punched tickets to the playoffs",
+    caption="Playoff teams in Red | Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Turnover Margin") + 
+  theme_minimal() +
+  coord_flip()
+
+ggplot() +
+  geom_bar(
+    data=playoffteams21, 
+    aes(x=reorder(team, tov_margin),
+        weight=tov_margin),
+    color="grey") +
+  labs(
+    title="NFL Playoff Teams' Turnover Margin 2021",
+    subtitle="How did the Raiders make the playoffs?",
+    caption="Source: nflfastR | By Tanner Malinowski",
+    x="Team", 
+    y="Turnover Margin") + 
+  theme_minimal()
+```
+## Again, really surprised that Vegas won as often as they did and slipped its way into the dance. It's one thing to be a little under zero in the turnover margin category, as is the case for playoff teams Philadelphia and Tennessee, but it's another to be more than ten below and in the same company as sub-.500 teams like Washington and Baltimore, yet still be playing in the playoffs.
+
+
+## I examined how well a team's turnover margin predicted its win total for the 2021 season.
+```{r}
+turnovers_21 <- turnovers_21 %>% 
+  select(-wins.y) %>% 
+  rename(wins=wins.x)
+
+tov_margin_fit <- lm(wins ~ tov_margin, data = turnovers_21)
+summary(tov_margin_fit)
+```
+
+## I got another good p-value, and my adjusted R-squared (55%) was just slightly lower than my adjusted R-sqaured value for my takeaways regression line, so I thought it was worth plotting.
+```{r}
+ggplot() + 
+  geom_point(data=turnovers_21, aes(x=tov_margin, y=wins)) +
+  geom_smooth(data=turnovers_21, aes(x=tov_margin, y=wins), method="lm") +
+   geom_point(
+    data=playoffteams21, 
+    aes(x=tov_margin, y=wins.x), 
+    color="red") +
+   geom_text_repel(
+    data=turnovers_21, 
+    aes(x=tov_margin, y=wins, label=team)) +
+ labs(
+    title="Turnover Margin and Wins 2021",
+    subtitle="Twenty percent of teams with a negative turnover margin made the playoffs in 2021",
+    caption="Source: nflfastR | By Tanner Malinowski",
+    x="Turnover Margin", 
+    y="Wins") + 
+  theme_minimal()
+```
+## I found the same to be true with this dataframe as the previous dataframe; teams that overachieved had a better shot at the playoffs than teams that underacheived. While Tennessee racking up 12 wins despite giving it away more often than taking it away, I was especially surprised (again) the Raiders won as frequently as they did even with a horrid turnover margin.
+
+## To revisit my earlier discovery about how the six top teams in scores off takeaway percentage failed to win a playoff game, I created a linear model and a scatterplot showing the relationship between scores off takeaways and wins in 2021 to dive deeper into the trend. Based on the regression model, an adjusted R-squared of about 37% doesn't indicate an incredibly strong correlation, but I graphed it nonetheless.
+```{r}
+playoffteams21 <- playoffteams21 %>% 
+  mutate(playoff_wins = case_when(
+    playoffs == 'missed' ~ 0,
+    team %in% c('TEN', 'LV', 'PHI', 'PIT', 'ARI', 'DAL', 'NE', 'GB') ~ 0,
+    team %in% c('BUF', 'TB') ~ 1,
+    team %in% c('SF', 'KC') ~ 2,
+    team == 'CIN' ~ 3,
+    team == 'LA' ~ 4))
+
+playoff_wins_fit <- lm(playoff_wins ~ scores_off_takeaways_pct, data = playoffteams21)
+
+summary(playoff_wins_fit)
+```
+
+## Based on the regression model, an adjusted R-squared of about 37% doesn't indicate an incredibly strong correlation, but I graphed it nonetheless.
+```{r}
+summary(playoff_wins_fit)
+
+ggplot() + 
+  geom_point(data=playoffteams21, aes(x=scores_off_takeaways_pct, y=playoff_wins)) +
+  geom_smooth(data=playoffteams21, aes(x=scores_off_takeaways_pct, y=playoff_wins), method="lm") +
+  geom_text_repel(
+    data=playoffteams21, 
+    aes(x=scores_off_takeaways_pct, y=playoff_wins, label=team)) +
+  labs(
+    title="Playoff Teams' Scores off Takeaways Pct. 2021",
+    subtitle="Capitalizing on regular-season takeaways didn't translate to playoff success in 2021",
+    caption="Source: nflfastR | By Tanner Malinowski",
+    x="Scores off Takeaways %", 
+    y="Playoff Wins") + 
+  theme_minimal()
+```
+## If the 49ers had won the Super Bowl instead of the Rams, I think the R-squared value would have been greater. This would have meant that the Rams only won two playoff games, which was what the model expected them to do based on their scores off takeaway percentage throughout the season. The model would hace been shocked to find that Green Bay went one and done; the model literally gave the Packers a first-round bye. I couldn't take a ton of stock in this model given eight teams were bound to lose their first playoff game, but it was nonetheless interesting to learn that playoff teams with a lower scores off takeaways rating won more playoff games than teams with higher capitalization ratings.
+
+
+
+## To summarize: 
+
+##  1) How many takeaways did the Ravens have? Was it as often as I thought?
+The Ravens had 22 takeaways, which was even fewer than I expected. Just about one takeaway per game isn't a laudible figure for a franchise known for its suffocating defenses.
+
+##  2) Overall, which teams capitalized most efficiently off takeaways?
+The Titans were the only team in the NFL to score more than 70% of the time following a takeaway, while the Cowboys, Raiders, Patriots and Eagles all capitalized more than 60% of the time. Meanwhile, the Ravens were the second-worst team at capitalizing on their takeaways; they cashed in with a touchdown or a field goal just 36% of the time.
+
+##  3) How did a team's ability/inability to capitalize off of takeaways affect its playoff chances? Was there even a relationship? What did it mean for the Ravens?
+Based on the 'fit' linear model that had a 37% R-squared percentage, a team's ability to capitalize off takeaways was mediocre estimate of a team's win total for the 2021 season. Overall, teams that capitalized on their takeaways at least half the time won seven games at least, and most of them made the playoffs. Meanwhile, the Ravens overachieved in terms of wins given their scores off takeaways percentage. That was by no means a culprit of their playoff-less season. In reality, I should have felt fortunate that they won more than six games, which they should have according to the model.
+
+##  4) How accurately did takeaways predict a team's number of wins in 2021?
+The 'takeawaysfit' linear model's p-value of 58% made it a solid predictor of a team's wins in 2021. Again, teams that overachieved, which in this case meant winning more games than the regression line predicted given their number of takeaways -- typically made the playoffs, with the exceptions of Baltimore and handful of others. Given how few turnovers the Raiders forced, they shouldn't have even sniffed the postseason.
+
+##  5) Which teams had the highest turnover margin in 2021? 
+The Buccaneers and Packers tied for the highest turnover margin (+22), while Buffalo and Dallas both had at least a +15 turnover margin. Meanwhile, Baltimore had a -13 turnover margin, seventh-worst in the league.
+
+##  6) How accurately did turnover margin predict a team's number of wins in 2021?
+Altogether, 11 of the 17 teams with a positive turnover margin made the playoffs, while just three of the 15 teams with a negative turnover margin reached.
+
+
+Other notes:
+- With 52 takeaways combined across fumble recoveries, interceptions and fourth down stops, Tampa Bay led the NFL in takeaways in 2021
+
+- The Panthers had the most giveaways in 2021 (48).
+
+- Dallas and Tampa Bay both had the most scores off turnovers (30).
+
+- The Ravens had a turnover differential of -13 (22 takeaways to 35 giveaways) and scored just seven times off of a takeaway
+
+- Vegas really shouldn't have made the playoffs given their turnover margin
+
+Ranking the linear models:
+1: Wins ~ Takeaways (0.5831 R-sqaured)
+2: Wins ~ Turnover Margin (0.5538 R-squared)
+3: Wins ~ Scores off Takeaways (0.3751 R-sqaured)
+4: Playoff Wins ~ Scores off Takeaways (0.3728 R-sqaured)
+5: Wins ~ Giveaways (0.228 R-sqaured)
 

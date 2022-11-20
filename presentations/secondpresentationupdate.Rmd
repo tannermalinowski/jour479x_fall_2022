@@ -1,0 +1,190 @@
+---
+title: "RevisedSecondTry"
+author: "Tanner Malinowski"
+date: "2022-11-20"
+output: html_document
+---
+
+## I wanted to know how well a regular-season matchup between NFL teams can predict the results of a rematch in the playoffs later that season. I thought I could use nflfastR to do this since I wanted to examine each season since 2002 when the league expanded to 32 teams. At the bare minimum, I looked to explore how frequently (in a percentage) teams who win a regular-season matchup go on to win the postseason rematch. From there, I wanted to see if these percentages varied depending on when the regular-season matchup was played (Does a September matchup or a December matchup more accurately forecast a playoff result?). I also wanted to examine how inter-division meetings play a hand in predicting the outcome of a postseason result since the teams play each other twice in the regular season. Additionally, I was interested in whether the game's location has any impact on the rematch (does a change in venue benefit the regular season winner more or less, if at all?). But before I could dive into these questions, I had trouble organizing the regular-season meetings and the playoff rematches. I haven't yet found an efficient way to organize the data so that it shows the matchup and who won. I want to pursue these questions, but right now I'm spinning my wheels on how to organize my data.
+
+I thought of six steps:
+
+## 1. Find the playoff matchups
+## 2. Determine if there was a regular-season meeting.
+## 3. Determine which team won the regular-season meeting.
+## 4. Compare it to the playoff result.
+## 5. If the regular-season winner also won the playoff meeting, then in the "winner" column, write "same." If the regular-season winner lost the playoff meeting, write "other."
+## 6. Determine the percentage of "same" results for the season.
+
+```{r}
+library(tidyverse)
+library(nflfastR)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(ggalt)
+```
+
+## Loading nflfastR for the 2021 season
+```{r}
+nfl21 <- read_rds("https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2021.rds")
+```
+
+## Step 1: Finding the playoff matchups from the 2021 season
+```{r}
+playoffs21 <- nfl21 %>% 
+  filter(season_type == "POST") %>% 
+  group_by(game_id) %>% 
+  summarize(total=n())
+
+playoffs21
+```
+
+## From here I created a dataframe showing each playoff team's meetings with the teams they faced in the playoffs. The dataframes included regular-season matchups and playoff matchups. I also mutated a column indicating the teams involved thinking it would make the data easier to organize and filter.
+```{r}
+ramsvscardinals21 <- nfl21 %>% 
+  filter(str_detect(game_id, "ARI_LA") | str_detect(game_id, "LA_ARI")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "ARI-LA")
+```
+
+```{r}
+bengalsvsraiders21 <- nfl21 %>% 
+  filter(str_detect(game_id, "LV_CIN") | str_detect(game_id, "CIN_LV")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "LV-CIN")
+```
+
+```{r}
+patriotsvsbills21 <- nfl21 %>% 
+  filter(str_detect(game_id, "NE_BUF") | str_detect(game_id, "BUF_NE")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "NE-BUF")
+```
+
+```{r}
+eaglesvsbucs21 <- nfl21 %>% 
+  filter(str_detect(game_id, "PHI_TB") | str_detect(game_id, "TB_PHI")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "PHI-TB")
+```
+
+```{r}
+steelersvschiefs21 <- nfl21 %>% 
+  filter(str_detect(game_id, "PIT_KC") | str_detect(game_id, "KC_PIT")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "PIT-KC")
+```
+
+```{r}
+ninersvscowboys21 <- nfl21 %>% 
+  filter(str_detect(game_id, "SF_DAL") | str_detect(game_id, "DAL_SF")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "SF-DAL")
+```
+
+```{r}
+billsvschiefs21 <- nfl21 %>% 
+  filter(str_detect(game_id, "BUF_KC") | str_detect(game_id, "KC_BUF")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "BUF-KC")
+```
+
+```{r}
+bengalsvstitans21 <- nfl21 %>% 
+  filter(str_detect(game_id, "CIN_TEN") | str_detect(game_id, "TEN_CIN")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "CIN-TEN")
+```
+
+```{r}
+ramsvsbucs21 <- nfl21 %>% 
+  filter(str_detect(game_id, "LA_TB") | str_detect(game_id, "TB_LA")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "LA-TB")
+```
+
+```{r}
+ninersvspackers21 <- nfl21 %>% 
+  filter(str_detect(game_id, "SF_GB") | str_detect(game_id, "GB_SF")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "SF-GB")
+```
+
+```{r}
+bengalsvschiefs21 <- nfl21 %>% 
+  filter(str_detect(game_id, "CIN_KC") | str_detect(game_id, "KC_CIN")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "CIN-KC")
+```
+
+```{r}
+ninersvsrams21 <- nfl21 %>% 
+  filter(str_detect(game_id, "SF_LA") | str_detect(game_id, "LA_SF")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "SF-LA")
+```
+
+```{r}
+bengalsvsrams21 <- nfl21 %>% 
+  filter(str_detect(game_id, "CIN_LA") | str_detect(game_id, "LA_CIN")) %>% 
+  group_by(week, home_team, home_score, away_team, away_score, season_type) %>% 
+  summarize(total=n()) %>% 
+  mutate(matchup = "CIN-LA")
+```
+
+## Next I combined these 13 dataframes into one.
+```{r}
+meetings21 <- rbind(bengalsvschiefs21,
+       bengalsvsraiders21,
+       bengalsvsrams21,
+       bengalsvstitans21,
+       billsvschiefs21,
+       eaglesvsbucs21, 
+       ninersvscowboys21,
+       ninersvsrams21,
+       ninersvspackers21,
+       patriotsvsbills21,
+       ramsvsbucs21,
+       ramsvscardinals21,
+       steelersvschiefs21,
+       ) %>% 
+group_by(matchup)
+```
+
+## Step 2: Determining whether there was a regular-season meeting. 
+I realized that inter-division matchups would complicate things since these teams played twice in the regular season. Also, not every playoff matchup featured a regular-season meeting, so I created a dataframe organzing how frequently each playoff matchup occurred in 2021.
+```{r}
+meetings21condensed <- meetings21 %>% 
+  group_by(matchup) %>% 
+  summarize(total_meetings=n())
+```
+
+## So there were three playoff games that pitted teams against each other for the first time that season: Cowboys-49ers, Titans-Bengals and Bengals-Rams. All other playoff matchups in 2021 were regular_season rematches. I realized that some playoff games were the third matchup that season between the two teams since they play in the same division, where they meet twice a year in the regular season.
+
+## I created a new dataframe including just rematches.
+```{r}
+rematches21 <- meetings21condensed %>% 
+  filter(total_meetings > 1)
+
+rematches21
+```
+
+## This was where I got stuck. I got the first two steps: finding the playoff matchups and determining if there was a regular-season meeting. But I struggled to come up with an efficient way to find the regular-season winner and the postseason winner. I know what I want my ideal dataframe to look like, but I'm not sure how to get there. A helpful dataframe would include these columns: season, matchup, regular_season_winner, postseason_winner. My main issue has been efficiently filtering out the matchups. I tried doing it through the string detect function within the game_id column since it lists the teams who played each other, but the order in which they're listed matters. The team listed first is the away team. So, when I was finding matchups between the Bengals and the Cheifs, using str_detect(game_id, "CIN_KC") only gave me the playoff matchup since the Bengals were the away team. It didn't give me the Week 17 matchup because Cincinnati was the home team, so I had to add another sring detect that flipped the order of the teams. This got really tedious when I did them for the rest of the playoff matchups. I want to examine data since 2002 since the NFL's had the same 32 teams since then, and I'm not sure if my strategy is the best for examining 20 seasons' worth of data. I have dataframes for each playoff matchup and any regular-season matchups, but I'm struggling to create columns/rows that indicate the regular-season winner, the postseason winner and whether those winners were the same or different. Overall, I'm struggling to utilize the nflfastR data in an optimal way. I found a more condensed dataset from ProFootballReference but I ran into the same issue, where I had trouble indicating the matchup within its own column. Admittedly, at this point I think it would be easier to create my own dataframe in Excel and work off of that. 
+
+
+
+
+

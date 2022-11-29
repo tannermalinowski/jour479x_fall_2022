@@ -1,0 +1,160 @@
+Women's Basketball Rosters
+Tanner Malinowski
+November 22, 2022
+
+
+```{r}
+library(tidyverse)
+library(usdata)
+```
+
+```{r}
+rosters23 <- read_csv('https://github.com/dwillis/wbb-rosters/raw/main/rosters_2022-23.csv')
+```
+
+## Things to clean
+*Standardize Positions
+*Standardizing State (would need to extract)
+*Drop where name is NA
+*Standardize year column (dealing with redshirts and also grad students)
+*Standardizing height (5'10" or 5-10)
+
+## Columns to Add
+*State 
+*Country
+*Height in inches
+
+```{r}
+rosters23_clean <- rosters23 %>% mutate(hometown_clean = str_to_upper(hometown))
+
+rosters23_clean <- rosters23_clean %>% separate(col=hometown_clean, into=c("new_hometown", "state"), sep=",", extra="merge")
+```
+
+```{r}
+rosters23_clean %>% distinct(state) %>% arrange(state)
+```
+
+
+```{r}
+rosters23_clean <- rosters23_clean %>% mutate(state = str_trim(state))
+```
+
+```{r}
+rosters23_clean <- rosters23_clean %>% 
+  mutate(state = str_trim(state), state = str_replace(state, '\\.','')) %>% 
+  mutate(state = case_when(
+     is.na(abbr2state(state)) ~ state,
+     TRUE ~ abbr2state(state))
+  )
+```
+
+```{r}
+rosters23_clean <- rosters23_clean %>% 
+  mutate(position_clean = case_when(
+    position == 'G' ~ "Guard",
+    position == 'F' ~ "Forward",
+    position == 'C' ~ "Center",
+    position == "Point" ~ "Guard",
+    position == "GUARD" ~ "Guard",
+    position == "Forward/Center" ~ "Center"
+  ))
+
+rosters23_clean %>% group_by(position_clean) %>% summarize(players=n()) %>% arrange(desc(players))
+```
+
+
+```{r}
+rosters23_clean <- rosters23_clean %>% 
+  mutate(clean_position = position) %>% 
+  mutate(clean_position = case_when(
+    clean_position == "G" ~ "Guard",
+    clean_position == "F" ~ "Forward",
+    clean_position == "C" ~ "Center",
+    clean_position == "Guard/Forward" ~ "Guard",
+    TRUE ~ clean_position
+  ))
+```
+
+
+```{r}
+rosters23_clean %>% 
+  group_by(state) %>% 
+  summarize(total=n())
+```
+```{r}
+rosters22 <- read_csv('https://github.com/dwillis/wbb-rosters/raw/main/rosters_2021-22.csv')
+```
+
+```{r}
+rosters22_clean <- rosters22 %>% mutate(hometown_clean = str_to_upper(hometown))
+
+rosters22_clean <- rosters22_clean %>% separate(col=hometown_clean, into=c("new_hometown", "state"), sep=",", extra="merge")
+```
+```{r}
+rosters22_clean %>% distinct(state) %>% arrange(state)
+```
+
+```{r}
+rosters22_clean <- rosters22_clean %>% mutate(state = str_trim(state))
+```
+
+```{r}
+rosters22_clean <- rosters22_clean %>% 
+  mutate(state = str_trim(state), state = str_replace(state, '\\.','')) %>% 
+  mutate(state = case_when(
+     is.na(abbr2state(state)) ~ state,
+     TRUE ~ abbr2state(state))
+  )
+```
+
+```{r}
+rosters22_clean <- rosters22_clean %>% 
+  mutate(position_clean = case_when(
+    position == 'G' ~ "Guard",
+    position == 'F' ~ "Forward",
+    position == 'C' ~ "Center",
+    position == "Point" ~ "Guard",
+    position == "GUARD" ~ "Guard",
+    position == "Forward/Center" ~ "Center"
+  ))
+
+rosters22_clean %>% group_by(position_clean) %>% summarize(players=n()) %>% arrange(desc(players))
+```
+
+```{r}
+rosters22_clean <- rosters22_clean %>% 
+  mutate(clean_position = position) %>% 
+  mutate(clean_position = case_when(
+    clean_position == "G" ~ "Guard",
+    clean_position == "F" ~ "Forward",
+    clean_position == "C" ~ "Center",
+    clean_position == "Guard/Forward" ~ "Guard",
+    TRUE ~ clean_position
+  ))
+```
+
+```{r}
+rosters23_clean %>% 
+  group_by(clean_position) %>% 
+  summarize(total=n())
+```
+```{r}
+rosters22_clean %>% 
+  filter(clean_position == "Wing/Point")
+```
+
+```{r}
+In 2022 but not 2023: 
+  5-8, Sophia DiMillia, AJ Marotte, Andrea Aquino, Center/Power, Combo, Ellie Mack, Emily Codding, F-G, FORWARD/CENTER, FWD/C, G | F, G., G/PG, Gaurd, Greta Kampschroeder, Jelena Mitrovic, Jovana Subasic, Jr., Kennedy Brown, Noelle Mannen, PF/C, PG/SG, Student, Student Manager, Talia von Oelhoffen, Taya Corosdale, Taylor Jones, Tea Adams,
+
+
+In 2023 but not 2022: 5'1", 5-10, 6-1, Center / Forward, Wing/Center, Gaurd/Forward, F/W, Gr., Post/Forward, Wing/Center
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,485 @@
+---
+title: "FinalPresentation2"
+author: "Tanner Malinowski"
+date: "2022-12-11"
+output: html_document
+---
+
+The 2011 NCAA Men's Basketball National Championship was riddled with putrid shooting by both UConn and Butler. The Huskies shot 19-55 (34.5%) and a listless 1-11 (9.1%) from 3-point range. Meanwhile, the Bulldogs shot just 12-64 (18.8%) and missed 23 of their first 25 shots in the second half. Butler led 22-19 at halftime, but its second-half cold streak allowed UConn to pull away despite its shooting struggles for a 53-41 win, marking the lowest-scoring championship game in March Madness history. 
+
+I was fascinated by the dueling lackluster shooting night from both teams. I was really intrigued as to how Butler missed 42 clean field goal attempts (UConn had 10 blocks) and how unexpected that really was. Meanwhile, UConn's poor 3-point shooting performance led me to question how they pulled off the win, especially considering that Butler made eight more threes than the Huskies but still managed to lose by 12. How did  Butler lose despite outscoring UConn 27-3 from 3-point range and making just seven fewer shots than the Huskies?
+
+Overall, I explored the rarity of both teams' shooting struggles. I first examined how rare each team's shooting night was compared to all games in the 2010-2011 season, then I evaluated the rarity of those shooting percentages throughout men's college basketball beyond 2010-2011. From there, I found out how rare each team's miserable shooting was given their shooting averages throughout the 2010-2011 up until that game. Lastly, I poked around to determine how teams who shot as poorly as UConn managed to win their games in the 2010-2011 season. 
+
+I found that Butler's woeful 18.8% night from the field was pretty much unheard of while UConn used a specific type of score to gain an edge over the Bulldogs.
+
+Loading packages
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(ggbeeswarm)
+library(ggrepel)
+library(waffle)
+library(Hmisc)
+library(ggtext)
+```
+
+Loading inital dataframes
+```{r}
+basketball <- read_csv("https://dwillis.github.io/sports-data-files/logs1222.csv")
+
+logs11 <- read_csv("~/JOUR479X/jour479x_fall_2022-main/data/logs11.csv")
+
+basketball <- rbind(basketball, logs11)
+
+basketball <- basketball %>% 
+  filter(str_detect(W_L, "W"))
+```
+
+How rare was it for UConn to shoot 34.6% in the 2010-2011 season?
+```{r}
+basketball %>% 
+ filter(Season == "2010-2011") %>% 
+  summarise(games=n())
+```
+5735 games in 2010-2011
+
+How many games in 2010-2011 saw at least one team shoot 34.5% or worse from the field?
+```{r}
+basketball %>% 
+  filter(Season == "2010-2011") %>% 
+  filter(TeamFGPCT < 0.346 | OpponentFGPCT < 0.346)
+```
+1286 games where at least one team shot under 34.6%
+
+How many games in 2010-2011 did both teams shoot better than 34.5% from the field?
+```{r}
+5735-1286
+```
+4449 games where both teams shot at least 34.6%
+
+I wanted to create a waffle chart to display this along with the rarity of Butler's poor shooting night, so first I created a value for 1) the number of games in 2010-2011 where at least one team shot below 34.6% from the field, and 2) the number of games that season where both teams shot better than 34.5%. 
+```{r}
+under34.6pct2011 <- c("Under34.6pct"=1286, "Over34.6pct"=4449)
+```
+Then I moved on to Butler:
+
+How rare was it for Butler to shoot below 18.9% in 2010-2011?
+```{r}
+basketball %>% 
+  filter(Season == "2010-2011") %>% 
+  filter(TeamFGPCT < 0.189 | OpponentFGPCT < 0.189)
+```
+9 games where at least one team shot under 18.9%
+
+```{r}
+5735-9
+```
+5726 games where both teams shot at least 18.9%
+
+Creating a separate waffle chart displaying how rare it was for a team to shoot under 18.9% from the field in 2010-2011.
+```{r}
+under18.9pct2011 <- c("Under18.9pct"=9, "Over18.9pct"=5726)
+```
+
+Here are the waffle charts:
+```{r}
+waffle(under34.6pct2011/9, rows = 20, xlab="1 square = 9 games", colors = c("red", "grey")) + 
+  labs(
+    title="The poor shooting at the 2011 natty was unexpectedly bad", 
+    subtitle="Just under a quarter of games had a shooting performance as worse as UConn's",
+    caption="Source: Derek Willis | Graphic by Tanner Malinowski") + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 10),
+    axis.title.y = element_blank()
+  )
+
+waffle(under18.9pct2011/9, rows = 20, xlab="1 square = 9 games", colors = c("red", "grey")) + 
+  labs(
+    title="The poor shooting at the 2011 natty was unexpectedly bad", 
+    subtitle="Nine of 5,735 games in 2010-11 saw a team shoot as poorly as Butler",
+    caption="Source: Derek Willis | Graphic by Tanner Malinowski") + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 10),
+    axis.title.y = element_blank()
+  )
+```
+So, shooting below 34.6% in a game during the 2010-2011 season wasn't too common, and shooting below 18.9% percent was practically unheard of.
+
+
+I was curious to see this on a per-season basis, specifically the games in which a team shot below 34.6%. I also wanted to know whether having just nine games where a team shot below 18.9% was as rare in later seasons.
+```{r}
+games_by_season <- basketball %>% 
+  group_by(Season) %>% 
+  summarise(games=n())
+
+games_under_346_by_season <- basketball %>%
+  group_by(Season) %>% 
+  filter(TeamFGPCT < 0.346 | OpponentFGPCT < 0.346) %>% 
+  summarise(under.346pct=n())
+
+under_346 <- inner_join(games_by_season, games_under_346_by_season, by = "Season") %>%
+  mutate(percent = (under.346pct/games)*100)
+
+games_under_189_by_season <- basketball %>%
+  group_by(Season) %>% 
+  filter(TeamFGPCT < 0.189 | OpponentFGPCT < 0.189) %>% 
+  summarise(under189pct=n())
+
+under_189 <- inner_join(games_by_season, games_under_189_by_season, by = "Season") %>%
+  mutate(percent = (under189pct/games)*100)
+```
+I created a line graph showing how many games there were each season where 1) a team shot under 34.6%, and 2) a team shot under 18.9%.
+```{r}
+ggplot() + 
+  geom_line(data=under_346, aes(x=Season, y=under.346pct), group = 1, color = "blue") + 
+  geom_text(aes(x="2013-2014", y=1000, label="At least one team shot below 34.6%"), color="blue") +
+  geom_line(data=under_189, aes(x=Season, y=under189pct), group = 1, color = "black") +
+  geom_text(aes(x="2013-2014", y=200, label="At least one team shot below 18.9%"), color="black") +
+  labs(x="Season", y="Number of Games", title="Teams Almost Never Shot 18.8% or Worse", subtitle="There were 52 games from 2010-11 through 2021-22 in which a team shot 18.8% or worse from the field ", caption="Source: Derek Willis | By Tanner Malinowski") + 
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 8), 
+    axis.text.x = element_text(angle = 60, vjust = 1.5, hjust = 1.25), 
+    plot.subtitle = element_text(size=10), 
+    panel.grid.minor = element_blank()
+    )
+```
+The number of games in which a team has shot below 34.6% from the field has fluctuated a bit, with 2014-2015 seeing just about 1500 instances and 2020-2021 having fewer than a thousand instances, the only year in which this happened. 2020-2021 was the covid season though, so maybe this isn't as dramatic of a figure as it may initially appear. If you squint hard enough, 2010-2011 had the most games where a team shot below 18.9% from the field. So, even since the 2010-2011 national championship, shooting below 34.6% has been fairly rare, while shooting below 18.9% has been nearly unheard of.
+
+Next I wanted to explore how rare both teams' respective shooting performances were given their field goal percentage in 2010-2011 up until that game. I ran some simulations to evaluate this. I started with Butler's 12-64 night:
+
+How rare was it for Butler to shoot 12-64 given its field goal percentage for the season up until that game?
+```{r}
+butler_wins_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", TeamFull == "Butler") %>% 
+  summarise(butler_fgpct = mean(TeamFGPCT))
+
+butler_losses_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", Opponent == "Butler", TeamFull != "UConn") %>% 
+  summarise(butler_fgpct = mean(OpponentFGPCT))
+
+butler_2010_2011 <- rbind(butler_wins_2010_2011, butler_losses_2010_2011) %>% 
+  summarise(butler_fgpct = mean(butler_fgpct))
+
+butler_2010_2011
+```
+Butler entered the national championship shooting 42.4% from the field.
+
+If a Butler team that shot 42.4% took 64 shots on 1,000 occasions, how many times would it shoot as poorly as it did in the national championship? 
+```{r}
+set.seed(1234)
+
+butler_sims <- rbinom(n = 1000, size = 64, prob = 0.424)
+
+table(butler_sims)
+```
+Making 12 shots isn't even in the realm of possibilities for Butler here.
+
+```{r}
+hist(butler_sims)
+```
+
+Next I wanted to determine the same for UConn: given its field goal percentage throughout the 2010-2011 season, how rare was its shooting performance in the national championship game?
+```{r}
+uconn_wins_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", TeamFull == "UConn", Opponent != "Butler") %>% 
+  summarise(uconn_fgpct = mean(TeamFGPCT))
+
+uconn_losses_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", Opponent == "UConn") %>% 
+  summarise(uconn_fgpct = mean(OpponentFGPCT))
+
+uconn_2010_2011 <- rbind(uconn_wins_2010_2011, uconn_losses_2010_2011) %>% 
+  summarise(uconn_fgpct = mean(uconn_fgpct))
+
+uconn_2010_2011
+```
+UConn entered the national championship game shooting 41.8% from the field. 
+
+If a UConn team that shot 41.8% took 55 shots on 1,000 occasions, how many times would it shoot as poorly as it did in the national championship? 
+```{r}
+set.seed(1234)
+
+uconn_sim <- rbinom(n = 1000, size = 55, prob = 0.418)
+
+table(uconn_sim)
+```
+```{r}
+52+41+26+17+10+2+4+3+1
+```
+
+Given its 41.8% field goal percentage throughout the 2010-11 season up until the national championship, if UConn played another 1,000 games where it took 55 shots, it would make 19 or fewer (34.5% or below) 156 times (15.6 percent). 
+
+```{r}
+hist(uconn_sim)
+```
+
+What about UConn's 3-point display? How well were the Huskies shooting from three entering the national title, and how rare was it for them to shoot that poorly?
+```{r}
+threes_uconn_wins_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", TeamFull == "UConn", Opponent != "Butler") %>% 
+  summarise(uconn_3ptfgpct = mean(Team3PPCT))
+
+threes_uconn_losses_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", Opponent == "UConn") %>% 
+  summarise(uconn_3ptfgpct = mean(Opponent3PPCT))
+
+threes_uconn_2010_2011 <- rbind(threes_uconn_wins_2010_2011, threes_uconn_losses_2010_2011) %>% 
+  summarise(uconn_3ptfgpct = mean(uconn_3ptfgpct))
+
+threes_uconn_2010_2011
+```
+UConn entered the national championship making 32.5% of its threes.
+
+If a UConn team that shot 32.5% on 3-pointers attempted 11 shots from beyond the arc on 1,000 separate occasions, how many times would the Huskies make one or fewer?
+```{r}
+set.seed(1234)
+
+uconn_threes_sim <- rbinom(n = 1000, size = 11, prob = 0.325)
+
+table(uconn_threes_sim)
+```
+Out of 1000 simulations of 11 3-point attempts based on their 32.5% 3-point percentage in 2010-2011 up until the national championship, UConn would make one or zero threes 79 times (7.9%).
+
+```{r}
+hist(uconn_threes_sim)
+```
+
+One more simulation: How rare was Butler's cold streak in the second half?
+
+Again, the Bulldogs entered the national championship shooting 42.4% from the field. Given that, if they took 25 shots on 1,000 separate occasions, how many times would they make fewer than three baskets?
+```{r}
+set.seed(1234)
+
+butler_cold_streak_sim <- rbinom(n = 1000, size = 25, prob = 0.424)
+
+table(butler_cold_streak_sim)
+```
+Again, making fewer than three shots isn't even a possibility here. Only three of the 1,000 simulations have Butler making three shots.
+
+```{r}
+hist(butler_cold_streak_sim)
+```
+There were 139 games in 2010-2011 in which a team won despite shooting below 34.6%. Is there a pattern among specific teams who did it? 
+```{r}
+wins_under_346pct_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", TeamFGPCT < 0.346) %>% 
+  mutate(
+    TeamFGmadediff = TeamFG - OpponentFG,
+    TeamTurnoverdiff = OpponentTurnovers - TeamTurnovers,
+    TeamFTmadediff = TeamFT - OpponentFT,
+    TeamReboundDiff = TeamTotalRebounds - OpponentTotalRebounds,
+    TeamFGpctdiff = TeamFGPCT - OpponentFGPCT) %>% 
+  summarise(
+    mean_fgmdiff = mean(TeamFGmadediff),
+    mean_tovdiff = mean(TeamTurnoverdiff),
+    mean_freethrowdiff = mean(TeamFTmadediff),
+    mean_rebdiff = mean(TeamReboundDiff),
+    meanfgpctdiff = mean(TeamFGpctdiff)
+  )
+
+wins_under_346pct_2010_2011
+```
+So, it appears like teams who won in 2010-2011 despite shooting 34.5% or worse made up for their bad shooting night at the free throw line, as they made an average of about six more free throws than their opponents. They also took better care of the ball, as winning teams averaged about 3 fewer turnovers than their opponents. Lastly, other teams tended to shoot just about as poorly, as losing teams  shot just three percent better than the winning teams.
+
+I dove deeper into this to see how much the other stats played a role.
+```{r}
+wins_under_346pct_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", TeamFGPCT < 0.346) %>% 
+  mutate(
+    TeamFGmadediff = TeamFG - OpponentFG,
+    TeamFGAdiff = TeamFGA - OpponentFGA,
+    TeamFGpctdiff = TeamFGPCT - OpponentFGPCT,
+    Team3PMdiff = Team3P - Opponent3P,
+    Team3Pattdiff = Team3PA - Opponent3PA,
+    Team3PPCTdiff = Team3PPCT - Opponent3PPCT,
+    TeamFTmadediff = TeamFT - OpponentFT,
+    TeamFTattdiff = TeamFTA - OpponentFTA,
+    TeamFTpctdiff = TeamFTPCT - OpponentFTPCT,
+    TeamOREBdiff = TeamOffRebounds - OpponentOffRebounds,
+    TeamReboundDiff = TeamTotalRebounds - OpponentTotalRebounds,
+    TeamASTdiff = TeamAssists - OpponentAssists,
+    TeamSTLdiff = TeamSteals - OpponentSteals,
+    TeamBlockdiff = TeamBlocks - OpponentBlocks,
+    TeamTurnoverdiff = OpponentTurnovers - TeamTurnovers,
+    TeamFLSdiff = TeamPersonalFouls - OpponentPersonalFouls) %>% 
+  summarise(
+    mean_fgmdiff = mean(TeamFGmadediff),
+    mean_fgadiff = mean(TeamFGAdiff),
+    mean_fgpctdiff = mean(TeamFGpctdiff),
+    mean_3pmdiff = mean(Team3PMdiff),
+    mean_3padiff = mean(Team3Pattdiff),
+    mean_3ptpctdiff = mean(Team3PPCTdiff),
+    mean_freethrowdiff = mean(TeamFTmadediff),
+    mean_freethrowattemptsdiff = mean(TeamFTattdiff),
+    mean_freethrowpercentdiff = mean(TeamFTpctdiff),
+    mean_orebdiff = mean(TeamOREBdiff),
+    mean_rebdiff = mean(TeamReboundDiff),
+    mean_astdiff = mean(TeamASTdiff),
+    mean_stldiff = mean(TeamSTLdiff), 
+    mean_blockdiff = mean(TeamBlockdiff),
+    mean_tovdiff = mean(TeamTurnoverdiff),
+    mean_foulsdiff = mean(TeamFLSdiff))
+
+wins_under_346pct_2010_2011
+```
+Winning teams shot about 7.6% better from the foul line in addition to getting to the line more freuqently. Controlling the glass helped too, as winning teams grabbed about two more rebounds than their opponent, including an extra three offensive rebounds that could have led to some critical second-chance points or some of those uber-important extra free throws, evidenced by the three-foul differential between losing teams and winning teams.
+
+To sum that up: Teams who won in 2010-2011 despite shooting below 34.6 from the field relied on:
+1) Attempting and making more free throws
+2) Winning extra possessions via offensive rebounds
+3) Taking care of the ball and committing fewer turnovers than their opponent
+4) Committing fewer fouls than their opponent
+
+What about 3-point shooting -- how did teams that shot below 9.2% from three in 2010-2011 win their games like UConn?
+```{r}
+wins_under_92pct_2010_2011 <- basketball %>% 
+  filter(Season == "2010-2011", Team3PPCT < 0.092) %>% 
+  mutate(
+    TeamFGmadediff = TeamFG - OpponentFG,
+    TeamFGAdiff = TeamFGA - OpponentFGA,
+    TeamFGpctdiff = TeamFGPCT - OpponentFGPCT,
+    Team3PMdiff = Team3P - Opponent3P,
+    Team3Pattdiff = Team3PA - Opponent3PA,
+    Team3PPCTdiff = Team3PPCT - Opponent3PPCT,
+    TeamFTmadediff = TeamFT - OpponentFT,
+    TeamFTattdiff = TeamFTA - OpponentFTA,
+    TeamFTpctdiff = TeamFTPCT - OpponentFTPCT,
+    TeamOREBdiff = TeamOffRebounds - OpponentOffRebounds,
+    TeamReboundDiff = TeamTotalRebounds - OpponentTotalRebounds,
+    TeamASTdiff = TeamAssists - OpponentAssists,
+    TeamSTLdiff = TeamSteals - OpponentSteals,
+    TeamBlockdiff = TeamBlocks - OpponentBlocks,
+    TeamTurnoverdiff = OpponentTurnovers - TeamTurnovers,
+    TeamFLSdiff = TeamPersonalFouls - OpponentPersonalFouls) %>% 
+  summarise(
+    mean_fgmdiff = mean(TeamFGmadediff),
+    mean_fgadiff = mean(TeamFGAdiff),
+    mean_fgpctdiff = mean(TeamFGpctdiff),
+    mean_3pmdiff = mean(Team3PMdiff),
+    mean_3padiff = mean(Team3Pattdiff),
+    mean_3ptpctdiff = mean(Team3PPCTdiff),
+    mean_freethrowdiff = mean(TeamFTmadediff),
+    mean_freethrowattemptsdiff = mean(TeamFTattdiff),
+    mean_freethrowpercentdiff = mean(TeamFTpctdiff),
+    mean_orebdiff = mean(TeamOREBdiff),
+    mean_rebdiff = mean(TeamReboundDiff),
+    mean_astdiff = mean(TeamASTdiff),
+    mean_stldiff = mean(TeamSTLdiff), 
+    mean_blockdiff = mean(TeamBlockdiff),
+    mean_tovdiff = mean(TeamTurnoverdiff),
+    mean_foulsdiff = mean(TeamFLSdiff))
+  
+wins_under_92pct_2010_2011
+```
+Teams atoned for their poor three-point shooting by simply making more field goals than their opponents -- about three more on average. Like the previous table measuring field goal percentage, getting to (and capitalizing at) the free throw line was huge, as winning teams made an average of about eight more free throws on about 10 more attempts than their opponents. Interestingly, offensive rebounds weren't as much of a factor on poor shooting 3-point nights as it was on poor shooting nights from the field overall. But getting rebounds nonetheless was still important, as winning teams gobbled up about seven more rebounds. Controlled aggression was also big, as winning teams committed an average of five fewer fouls.
+
+Summming that up:
+1) Teams made about three more field goals than their opponent
+2) Attempting and making more free throws accounted for about eight extra points
+3) Defensive rebounds were critical at limiting an opponent's extra possessions
+4) Playing smart and committing fewer fouls limited the opponent's chances of grabbing extra points at the free throw line
+
+I made a bar chart visualizing how important free throws were when it came to making up for a bad shooting night from the field in the 2010-2011 season. To start I made two dataframes. The first filtered out games in which the winning team shot below 34.6% from the field and the second filtered out games in which the winning team shot below 9.2% on 3-pointers. I mutated columns for both dataframes that displayed the differential in three throw attempts and free throw makes.
+
+```{r}
+avg346fts <- basketball %>% 
+  mutate(ftmdiff = TeamFT - OpponentFT, ftadiff = TeamFTA - OpponentFTA) %>% 
+  filter(TeamFGPCT < 0.346) %>% 
+  group_by(Season) %>% 
+  summarise(avg_free_throws_made = mean(ftmdiff), avg_free_throws_attempted = mean(ftadiff))
+```
+
+```{r}
+avg092fts <- basketball %>% 
+  mutate(ftmdiff = TeamFT - OpponentFT, ftadiff = TeamFTA - OpponentFTA) %>% 
+  filter(Team3PPCT < 0.092) %>% 
+  group_by(Season) %>% 
+  summarise(avg_free_throws_made = mean(ftmdiff), avg_free_throws_attempted = mean(ftadiff))
+```
+
+Next I pivoted the dataframes and filtered out data for just the 2010-2011 season.
+```{r}
+avg346fts <- avg346fts %>% 
+  pivot_longer(
+    cols=starts_with("avg"),
+    names_to="Type",
+    values_to="shots") %>% 
+  filter(Season == "2010-2011")
+
+avg092fts <- avg092fts %>% 
+    pivot_longer(
+    cols=starts_with("avg"),
+    names_to="Type",
+    values_to="shots") %>% 
+  filter(Season == "2010-2011")
+```
+
+Then I put it all together and created two separate bar charts:
+```{r}
+ggplot() + 
+  geom_bar(
+    data=avg346fts, 
+    aes(x=Type, weight=`shots`)
+  ) +
+labs(x="Free Throws", y="Count Per Game", title="Teams Atoned for Bad Field Goal Shooting at the Stripe", subtitle="Teams who won games despite shooting below 34.6% from the field in 2010-2011 got to the free throw line <br/> more often and made more free throws than their opponents ", caption="Source: Derek Willis | By Tanner Malinowski") + 
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 8), 
+    plot.subtitle = element_markdown(size=10), 
+    panel.grid.minor = element_blank()
+    )
+
+ggplot() + 
+  geom_bar(
+    data=avg092fts, 
+    aes(x=Type, weight=`shots`)
+  ) +
+labs(x="Free Throws", y="Count Per Game", title="Free Throws Made up for Poor 3-Point Shooting", subtitle="In 2010-2011, teams who won despite shooting below 9.2% on 3-pointers attempted and made more <br/> free throws than their opponents", caption="Source: Derek Willis | By Tanner Malinowski") + 
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 8), 
+    plot.subtitle = element_markdown(size=10), 
+    panel.grid.minor = element_blank()
+    )
+
+```
+How did this apply to UConn's national championship?
+```{r}
+basketball %>% 
+  filter(Season == "2010-2011", TeamFull == "UConn", Opponent == "Butler") %>% 
+  mutate(
+    TeamFGmadediff = TeamFG - OpponentFG,
+    TeamFGAdiff = TeamFGA - OpponentFGA,
+    TeamFGpctdiff = TeamFGPCT - OpponentFGPCT,
+    Team3PMdiff = Team3P - Opponent3P,
+    Team3Pattdiff = Team3PA - Opponent3PA,
+    Team3PPCTdiff = Team3PPCT - Opponent3PPCT,
+    TeamFTmadediff = TeamFT - OpponentFT,
+    TeamFTattdiff = TeamFTA - OpponentFTA,
+    TeamFTpctdiff = TeamFTPCT - OpponentFTPCT,
+    TeamOREBdiff = TeamOffRebounds - OpponentOffRebounds,
+    TeamReboundDiff = TeamTotalRebounds - OpponentTotalRebounds,
+    TeamASTdiff = TeamAssists - OpponentAssists,
+    TeamSTLdiff = TeamSteals - OpponentSteals,
+    TeamBlockdiff = TeamBlocks - OpponentBlocks,
+    TeamTurnoverdiff = OpponentTurnovers - TeamTurnovers,
+    TeamFLSdiff = TeamPersonalFouls - OpponentPersonalFouls) %>% 
+  select(TeamFGmadediff, TeamFGAdiff, TeamFGpctdiff, Team3PMdiff, Team3Pattdiff, Team3PPCTdiff, TeamFTmadediff, TeamFTattdiff, TeamFTpctdiff, TeamOREBdiff, TeamReboundDiff, TeamASTdiff, TeamSTLdiff, TeamBlockdiff, TeamTurnoverdiff, TeamFLSdiff)
+ 
+```
+So UConn didn't see many more opportunities from the line than Butler, but the Huskies made sure to capitalize on their chances from the charity stripe. Overall, it seems like Butler just couldn't put the ball in the basket regardless of how easily the shots came. UConn's plus-eight block advantage wiped out a bundle of potential Butler scores, as well.
+
+
+The poor shooting fans saw at the 2011 NCAA men's basketball national championship was unexpectedly bad. Only about 25% of games that season saw a team shoot below 34.6% from the field, and just over 10% of those teams managed to win the game. UConn somehow did it in the national championship, much in part to Butler's 18.8% clip from the field. A shooting percentage that poor only occurred nine times out of 5735 games (0.16% of games) throughout the 2010-2011 season. What a time to lay an egg. Meanwhile, UConn's poor outing from both the field and 3-point territory were rather rare given their season averages leading up to that point, while Butler's awful shooting literally couldn't have been predicted according to the simulation I ran. What UConn didn't score from the field, it made up for at the foul line, as was common among teams who struggled to shoot when the clock was running. The Huskies also dominated near the rim, as they hualed in 11 more rebounds than Butler and stifled eight more shots. Interestingly, though, UConn committed five more turnovers and two more fouls, but in the end it appeared that Butler's atrocious shooting negated those Husky mistakes. So, if a team isn't shooting well from the field, their best bet is to draw fouls, get to the line and make their free throws. And it can't hurt to control the glass, either. Of course, it's always a little easier when the other team puts forth a very rare dismal shooting display.
+
+
+
+
+
